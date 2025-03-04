@@ -1,6 +1,6 @@
-# InstaCaption - AI-Powered Instagram Caption Generator
+# Captionator - AI-Powered Instagram Caption Generator
 
-InstaCaption is a modern web application that uses AI to generate engaging and creative captions for your Instagram posts. Simply upload an image, select a tone, and get multiple caption options tailored to your content.
+Captionator is a modern web application that uses AI to generate engaging and creative captions for your Instagram posts. Simply upload an image, select a tone, and get multiple caption options tailored to your content.
 
 ## Features
 
@@ -35,8 +35,8 @@ InstaCaption is a modern web application that uses AI to generate engaging and c
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/insta-caption-generator.git
-   cd insta-caption-generator
+   git clone https://github.com/yourusername/captionator.git
+   cd captionator
    ```
 
 2. Install dependencies:

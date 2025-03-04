@@ -8,7 +8,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="col-span-1 md:col-span-2">
             <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
-              CaptionAI
+              Captionator
             </h3>
             <p className="text-gray-600 dark:text-gray-400 mb-4 max-w-md">
               Generate engaging, context-aware Instagram captions with AI. Upload your images and get captions that match your style and tone.
@@ -127,9 +127,9 @@ export default function Footer() {
 
         <div className="mt-12 pt-8 border-t border-gray-200 dark:border-gray-800">
           <p className="text-gray-500 dark:text-gray-400 text-center flex items-center justify-center">
-            &copy; {new Date().getFullYear()} CaptionAI. All rights reserved.
+            &copy; {new Date().getFullYear()} Captionator. All rights reserved.
             <span className="inline-flex items-center ml-1">
-              Made with <FiHeart className="w-4 h-4 mx-1 text-red-500" /> by CaptionAI Team
+              Made with <FiHeart className="w-4 h-4 mx-1 text-red-500" /> by Captionator Team
             </span>
           </p>
         </div>

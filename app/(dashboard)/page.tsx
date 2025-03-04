@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useUser } from '@clerk/nextjs';
 import { FiUpload, FiImage, FiAlertCircle, FiX } from 'react-icons/fi';
+import { useDropzone } from 'react-dropzone';
 import { useImageUpload } from '../hooks/useImageUpload';
 import { useCaptionGeneration } from '../hooks/useCaptionGeneration';
 import CaptionCard from '../components/CaptionCard';
@@ -11,17 +12,39 @@ import ToneSelector from '../components/ToneSelector';
 import { Caption } from '../types';
 
 export default function Dashboard() {
-  const { isUploading, uploadedImageUrl, uploadImage, resetUpload } = useImageUpload();
-  const { captions, isGenerating, error, generateCaptions } = useCaptionGeneration(uploadedImageUrl);
+  const { isUploading, uploadedImageUrl, uploadImage, resetUpload, error: uploadError } = useImageUpload();
+  const { captions, isGenerating, error: captionError, generateCaptions } = useCaptionGeneration(uploadedImageUrl);
   const [selectedTone, setSelectedTone] = useState('casual');
   const [generatedCaptions, setGeneratedCaptions] = useState<Caption[]>([]);
   const { isLoaded } = useUser();
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     if (captions.length > 0) {
       setGeneratedCaptions(captions);
     }
   }, [captions]);
+
+  const onDrop = useCallback(
+    async (acceptedFiles: File[]) => {
+      if (acceptedFiles && acceptedFiles.length > 0) {
+        const file = acceptedFiles[0];
+        if (file.type.startsWith('image/')) {
+          await uploadImage(file);
+        }
+      }
+    },
+    [uploadImage]
+  );
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      'image/*': ['.jpeg', '.jpg', '.png', '.gif', '.webp'],
+    },
+    maxFiles: 1,
+    multiple: false,
+  });
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -45,6 +68,10 @@ export default function Dashboard() {
     setGeneratedCaptions([]);
   };
 
+  // Update dragging state for animation
+  const handleDragEnter = useCallback(() => setIsDragging(true), []);
+  const handleDragLeave = useCallback(() => setIsDragging(false), []);
+
   if (!isLoaded) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 flex items-center justify-center">
@@ -64,7 +91,7 @@ export default function Dashboard() {
             transition={{ duration: 0.5 }}
           >
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-              Instagram Caption Generator
+              Captionator
             </h1>
             <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
               Upload an image and get AI-generated captions for your Instagram posts.
@@ -79,7 +106,17 @@ export default function Dashboard() {
                 </h2>
 
                 {!uploadedImageUrl ? (
-                  <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center">
+                  <div 
+                    {...getRootProps()} 
+                    className={`border-2 border-dashed rounded-lg p-8 text-center transition-all duration-300 ${
+                      isDragActive 
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                        : 'border-gray-300 dark:border-gray-600'
+                    }`}
+                    onDragEnter={handleDragEnter}
+                    onDragLeave={handleDragLeave}
+                  >
+                    <input {...getInputProps()} />
                     <input
                       type="file"
                       id="image-upload"
@@ -92,9 +129,21 @@ export default function Dashboard() {
                       htmlFor="image-upload"
                       className="cursor-pointer flex flex-col items-center justify-center"
                     >
-                      <FiImage className="w-16 h-16 text-gray-400 dark:text-gray-500 mb-4" />
-                      <span className="text-gray-600 dark:text-gray-400 mb-2">
-                        {isUploading ? 'Uploading...' : 'Click to upload an image'}
+                      <FiImage className={`w-16 h-16 mb-4 ${
+                        isDragActive 
+                          ? 'text-blue-500 dark:text-blue-400' 
+                          : 'text-gray-400 dark:text-gray-500'
+                      }`} />
+                      <span className={`mb-2 ${
+                        isDragActive 
+                          ? 'text-blue-600 dark:text-blue-400 font-medium' 
+                          : 'text-gray-600 dark:text-gray-400'
+                      }`}>
+                        {isDragActive 
+                          ? 'Drop your image here' 
+                          : isUploading 
+                            ? 'Uploading...' 
+                            : 'Drag & drop or click to upload an image'}
                       </span>
                       <span className="text-xs text-gray-500 dark:text-gray-500">
                         JPG, PNG, GIF up to 10MB
@@ -133,9 +182,9 @@ export default function Dashboard() {
                 </div>
               )}
 
-              {error && (
+              {(uploadError || captionError) && (
                 <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-                  {error}
+                  {uploadError || captionError}
                 </div>
               )}
 

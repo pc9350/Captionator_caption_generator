@@ -26,7 +26,7 @@ export default function Header() {
                 <FiCamera className="w-5 h-5 text-white" />
               </div>
               <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">
-                CaptionAI
+                Captionator
               </span>
             </motion.div>
           </Link>

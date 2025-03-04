@@ -8,7 +8,7 @@ import Footer from './components/Footer';
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "CaptionAI - AI-Powered Instagram Caption Generator",
+  title: "Captionator - AI-Powered Instagram Caption Generator",
   description: "Generate engaging, context-aware Instagram captions with AI. Upload your images and get captions that match your style and tone.",
 };
 
