@@ -1,36 +1,99 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# InstaCaption - AI-Powered Instagram Caption Generator
+
+InstaCaption is a modern web application that uses AI to generate engaging and creative captions for your Instagram posts. Simply upload an image, select a tone, and get multiple caption options tailored to your content.
+
+## Features
+
+- **AI-Powered Caption Generation**: Leverages OpenAI to create contextually relevant captions based on your images
+- **Multiple Tone Options**: Choose from casual, professional, funny, inspirational, or storytelling tones
+- **Save Favorite Captions**: Save your favorite captions for later use
+- **Caption History**: View your past caption generations
+- **User Authentication**: Secure user accounts with Clerk authentication
+- **Responsive Design**: Works seamlessly on mobile, tablet, and desktop devices
+- **Dark Mode Support**: Comfortable viewing in any lighting condition
+
+## Tech Stack
+
+- **Frontend**: Next.js 14, React, Tailwind CSS, Framer Motion
+- **Backend**: Next.js API Routes
+- **AI**: OpenAI API
+- **Authentication**: Clerk
+- **Database**: Firebase Firestore
+- **Storage**: Firebase Storage
+- **Deployment**: Vercel
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- Node.js 18+ and npm/yarn
+- OpenAI API key
+- Firebase project
+- Clerk account
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Installation
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/insta-caption-generator.git
+   cd insta-caption-generator
+   ```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+2. Install dependencies:
+   ```bash
+   npm install
+   # or
+   yarn install
+   ```
 
-## Learn More
+3. Create a `.env.local` file in the root directory with the following variables:
+   ```
+   # OpenAI
+   OPENAI_API_KEY=your_openai_api_key_here
 
-To learn more about Next.js, take a look at the following resources:
+   # Firebase
+   NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_api_key_here
+   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_firebase_auth_domain_here
+   NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_firebase_project_id_here
+   NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_firebase_storage_bucket_here
+   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_firebase_messaging_sender_id_here
+   NEXT_PUBLIC_FIREBASE_APP_ID=your_firebase_app_id_here
+   NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=your_firebase_measurement_id_here
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+   # Clerk Authentication
+   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key_here
+   CLERK_SECRET_KEY=your_clerk_secret_key_here
+   NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+   NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+   NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
+   NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/dashboard
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+4. Run the development server:
+   ```bash
+   npm run dev
+   # or
+   yarn dev
+   ```
 
-## Deploy on Vercel
+5. Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Usage
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Sign up or log in to your account
+2. Upload an image from your device
+3. Select a tone for your caption
+4. Click "Generate Captions" to get AI-generated captions
+5. Copy, save, or regenerate captions as needed
+6. View your saved captions or caption history in the respective sections
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Acknowledgements
+
+- OpenAI for providing the AI capabilities
+- Clerk for authentication services
+- Firebase for database and storage solutions
+- Vercel for hosting and deployment

@@ -1,0 +1,84 @@
+import { create } from 'zustand';
+import { Caption, CaptionCategory, CaptionTone } from '../types';
+
+interface CaptionState {
+  // Image state
+  selectedImage: File | null;
+  imageUrl: string | null;
+  isUploading: boolean;
+  uploadProgress: number;
+  
+  // Caption generation state
+  generatedCaptions: Caption[];
+  selectedCategory: CaptionCategory | 'All';
+  selectedTone: CaptionTone;
+  isGenerating: boolean;
+  includeHashtags: boolean;
+  includeEmojis: boolean;
+  
+  // User preferences
+  savedCaptions: Caption[];
+  
+  // Actions
+  setSelectedImage: (image: File | null) => void;
+  setImageUrl: (url: string | null) => void;
+  setIsUploading: (isUploading: boolean) => void;
+  setUploadProgress: (progress: number) => void;
+  setGeneratedCaptions: (captions: Caption[]) => void;
+  addGeneratedCaption: (caption: Caption) => void;
+  setSelectedCategory: (category: CaptionCategory | 'All') => void;
+  setSelectedTone: (tone: CaptionTone) => void;
+  setIsGenerating: (isGenerating: boolean) => void;
+  setIncludeHashtags: (include: boolean) => void;
+  setIncludeEmojis: (include: boolean) => void;
+  saveCaption: (caption: Caption) => void;
+  removeCaption: (captionId: string) => void;
+  reset: () => void;
+}
+
+export const useCaptionStore = create<CaptionState>((set) => ({
+  // Initial state
+  selectedImage: null,
+  imageUrl: null,
+  isUploading: false,
+  uploadProgress: 0,
+  generatedCaptions: [],
+  selectedCategory: 'All',
+  selectedTone: 'Aesthetic & Artsy',
+  isGenerating: false,
+  includeHashtags: true,
+  includeEmojis: true,
+  savedCaptions: [],
+  
+  // Actions
+  setSelectedImage: (image) => set({ selectedImage: image }),
+  setImageUrl: (url) => set({ imageUrl: url }),
+  setIsUploading: (isUploading) => set({ isUploading }),
+  setUploadProgress: (progress) => set({ uploadProgress: progress }),
+  setGeneratedCaptions: (captions) => set({ generatedCaptions: captions }),
+  addGeneratedCaption: (caption) => 
+    set((state) => ({ 
+      generatedCaptions: [...state.generatedCaptions, caption] 
+    })),
+  setSelectedCategory: (category) => set({ selectedCategory: category }),
+  setSelectedTone: (tone) => set({ selectedTone: tone }),
+  setIsGenerating: (isGenerating) => set({ isGenerating }),
+  setIncludeHashtags: (include) => set({ includeHashtags: include }),
+  setIncludeEmojis: (include) => set({ includeEmojis: include }),
+  saveCaption: (caption) => 
+    set((state) => ({ 
+      savedCaptions: [...state.savedCaptions, caption] 
+    })),
+  removeCaption: (captionId) => 
+    set((state) => ({ 
+      savedCaptions: state.savedCaptions.filter((c) => c.id !== captionId) 
+    })),
+  reset: () => set({
+    selectedImage: null,
+    imageUrl: null,
+    isUploading: false,
+    uploadProgress: 0,
+    generatedCaptions: [],
+    isGenerating: false,
+  }),
+})); 
