@@ -68,6 +68,8 @@ export const captionFromFirestore = (
     category: data.category,
     hashtags: data.hashtags || [],
     emojis: data.emojis || [],
+    userId: data.userId,
+    createdAt: data.createdAt
   };
 };
 
@@ -96,7 +98,7 @@ export const saveCaption = async (userId: string, caption: Caption) => {
       };
       
       const docRef = await addDoc(collection(db, 'savedCaptions'), captionWithTimestamp);
-      return { ...captionWithTimestamp, id: docRef.id };
+      return { ...caption, id: docRef.id, userId };
     } catch (error) {
       console.error('Error saving caption:', error);
       throw error;
@@ -128,10 +130,7 @@ export const getSavedCaptions = async (userId: string): Promise<Caption[]> => {
       );
       
       const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      } as Caption));
+      return querySnapshot.docs.map(captionFromFirestore);
     } catch (error) {
       console.error('Error getting saved captions:', error);
       throw error;
@@ -174,10 +173,7 @@ export const getCaptionHistory = async (userId: string): Promise<CaptionHistory[
       );
       
       const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      } as CaptionHistory));
+      return querySnapshot.docs.map(captionHistoryFromFirestore);
     } catch (error) {
       console.error('Error getting caption history:', error);
       throw error;

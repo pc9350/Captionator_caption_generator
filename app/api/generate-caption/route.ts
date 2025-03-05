@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import openai from '@/app/lib/openai';
+import openai, { getCachedChatCompletion } from '@/app/lib/openai';
 import { CaptionCategory, CaptionTone } from '@/app/types';
 import { ChatCompletionContentPart } from 'openai/resources/chat/completions';
 
@@ -57,8 +57,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Cost-saving measure: Limit the number of images processed
+    const MAX_IMAGES = 3;
+    const processedImageData = imageData.slice(0, MAX_IMAGES);
+    if (imageData.length > MAX_IMAGES) {
+      console.log(`Limiting image processing from ${imageData.length} to ${MAX_IMAGES} images to save costs`);
+    }
+
     // Validate base64 images
-    for (const base64 of imageData) {
+    for (const base64 of processedImageData) {
       if (!base64.startsWith('data:image/')) {
         return NextResponse.json(
           { error: 'Invalid image format. All images must be in base64 format.' },
@@ -77,15 +84,20 @@ export async function POST(req: NextRequest) {
       toneInstructions = `The tone should be: ${tone}`;
     }
 
+    // Cost-saving measure: Reduce the number of categories if not specified
+    const requestedCategories = categories && categories.length > 0 
+      ? categories 
+      : ['Funny', 'Aesthetic', 'Motivational']; // Reduced from 7 to 3 categories
+
     // Construct the prompt for OpenAI
     const systemPrompt = `You are an expert Instagram caption generator. 
-    Analyze the image${imageData.length > 1 ? 's' : ''} and generate creative, engaging captions that would perform well on Instagram.
-    ${imageData.length > 1 ? 'Consider all the provided images as a collection and generate captions that would work for the entire set.' : ''}
+    Analyze the image${processedImageData.length > 1 ? 's' : ''} and generate creative, engaging captions that would perform well on Instagram.
+    ${processedImageData.length > 1 ? 'Consider all the provided images as a collection and generate captions that would work for the entire set.' : ''}
     
     ${toneInstructions}
     ${categories && categories.length > 0 
-      ? `Focus on these categories: ${categories.join(', ')}` 
-      : 'Generate captions in these categories: Funny, Aesthetic, Motivational, Trendy, Witty, Deep, Minimal'}
+      ? `Focus on these categories: ${requestedCategories.join(', ')}` 
+      : `Generate captions in these categories: ${requestedCategories.join(', ')}`}
     ${includeHashtags ? 'Include relevant hashtags for each caption.' : 'Do not include any hashtags.'}
     ${includeEmojis ? 'Include appropriate emojis in the captions.' : 'Do not include any emojis in the captions.'}
     
@@ -111,11 +123,11 @@ export async function POST(req: NextRequest) {
 
     // Prepare the content array with all images
     const content: ChatCompletionContentPart[] = [
-      { type: "text", text: `Generate Instagram captions for ${imageData.length > 1 ? 'these images' : 'this image'}:` }
+      { type: "text", text: `Generate Instagram captions for ${processedImageData.length > 1 ? 'these images' : 'this image'}:` }
     ];
 
     // Add all images to the content array
-    imageData.forEach(base64Image => {
+    processedImageData.forEach(base64Image => {
       content.push({
         type: "image_url",
         image_url: {
@@ -124,9 +136,12 @@ export async function POST(req: NextRequest) {
       } as ChatCompletionContentPart);
     });
 
+    // Cost-saving measure: Limit token usage
+    const MAX_TOKENS = 1000; // Reduced from 1500
+
     try {
-      // Call OpenAI API with the images
-      const response = await openai.chat.completions.create({
+      // Call OpenAI API with the images using our caching mechanism
+      const params = {
         model: "gpt-4o", // Using GPT-4o which has vision capabilities
         messages: [
           {
@@ -138,9 +153,12 @@ export async function POST(req: NextRequest) {
             content: content,
           },
         ],
-        max_tokens: 1500, // Increased token limit for multiple images
+        max_tokens: MAX_TOKENS,
         response_format: { type: "json_object" }, // Request JSON format explicitly
-      });
+      };
+
+      // Use cached completion if available
+      const response = await getCachedChatCompletion(params);
 
       // Parse the response
       const responseContent = response.choices[0].message.content || '{"captions": []}';
@@ -165,6 +183,12 @@ export async function POST(req: NextRequest) {
 
       // Normalize caption fields to ensure consistent naming
       parsedContent.captions = normalizeCaptions(parsedContent.captions);
+
+      // Cost-saving measure: Limit the number of captions returned
+      const MAX_CAPTIONS = 5;
+      if (parsedContent.captions.length > MAX_CAPTIONS) {
+        parsedContent.captions = parsedContent.captions.slice(0, MAX_CAPTIONS);
+      }
 
       return NextResponse.json(parsedContent);
     } catch (apiError: any) {

@@ -71,7 +71,11 @@ export const useCaptionStore = create<CaptionState>((set) => ({
       uploadedImages: [...state.uploadedImages, image] 
     })),
   clearUploadedImages: () => set({ uploadedImages: [] }),
-  setGeneratedCaptions: (captions) => set({ generatedCaptions: captions }),
+  setGeneratedCaptions: (captions) => set({ 
+    generatedCaptions: captions,
+    // If we're setting captions from the saved captions page, update savedCaptions too
+    savedCaptions: captions.some(c => c.id) ? captions : []
+  }),
   addGeneratedCaption: (caption) => 
     set((state) => ({ 
       generatedCaptions: [...state.generatedCaptions, caption] 
@@ -82,9 +86,20 @@ export const useCaptionStore = create<CaptionState>((set) => ({
   setIncludeHashtags: (include) => set({ includeHashtags: include }),
   setIncludeEmojis: (include) => set({ includeEmojis: include }),
   saveCaption: (caption) => 
-    set((state) => ({ 
-      savedCaptions: [...state.savedCaptions, caption] 
-    })),
+    set((state) => {
+      // Check if the caption is already in savedCaptions
+      const isCaptionAlreadySaved = state.savedCaptions.some(
+        (c) => c.id === caption.id || (c.text === caption.text && c.category === caption.category)
+      );
+      
+      if (isCaptionAlreadySaved) {
+        return state; // Don't add duplicates
+      }
+      
+      return { 
+        savedCaptions: [...state.savedCaptions, caption] 
+      };
+    }),
   removeCaption: (captionId) => 
     set((state) => ({ 
       savedCaptions: state.savedCaptions.filter((c) => c.id !== captionId) 

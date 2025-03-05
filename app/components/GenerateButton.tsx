@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { FiZap } from 'react-icons/fi';
+import { FiZap, FiDollarSign } from 'react-icons/fi';
 import { useCaptionGeneration } from '../hooks/useCaptionGeneration';
 import { useCaptionStore } from '../store/captionStore';
 
@@ -67,6 +67,12 @@ export default function GenerateButton({ tone = 'Casual' }: { tone?: string }) {
           </>
         )}
       </motion.button>
+
+      {/* Cost-saving indicator */}
+      <div className="mt-2 flex items-center justify-center text-xs text-gray-500">
+        <FiDollarSign className="mr-1 text-green-500" />
+        <span>Cost-saving optimizations enabled</span>
+      </div>
 
       {error && (
         <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500">

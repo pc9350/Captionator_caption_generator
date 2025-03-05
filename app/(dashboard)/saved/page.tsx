@@ -10,11 +10,39 @@ import { useFirebaseIntegration } from '@/app/hooks/useFirebaseIntegration';
 
 export default function SavedCaptions() {
   const { isSignedIn, isLoaded } = useUser();
-  const { savedCaptions } = useCaptionStore();
-  const { isLoading: isFirebaseLoading } = useFirebaseIntegration();
+  const { savedCaptions, setGeneratedCaptions } = useCaptionStore();
+  const { isLoading: isFirebaseLoading, getSavedCaptions } = useFirebaseIntegration();
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredCaptions, setFilteredCaptions] = useState(savedCaptions);
+  const [isLoadingCaptions, setIsLoadingCaptions] = useState(true);
 
+  // Fetch saved captions when the component mounts
+  useEffect(() => {
+    const fetchSavedCaptions = async () => {
+      if (isSignedIn) {
+        setIsLoadingCaptions(true);
+        try {
+          const captions = await getSavedCaptions();
+          // Update the store with the fetched captions
+          if (captions && captions.length > 0) {
+            setGeneratedCaptions(captions);
+          }
+        } catch (error) {
+          console.error('Error fetching saved captions:', error);
+        } finally {
+          setIsLoadingCaptions(false);
+        }
+      }
+    };
+
+    if (isLoaded && isSignedIn) {
+      fetchSavedCaptions();
+    } else if (isLoaded) {
+      setIsLoadingCaptions(false);
+    }
+  }, [isSignedIn, isLoaded, getSavedCaptions, setGeneratedCaptions]);
+
+  // Filter captions based on search term
   useEffect(() => {
     if (searchTerm.trim() === '') {
       setFilteredCaptions(savedCaptions);
@@ -27,14 +55,14 @@ export default function SavedCaptions() {
             caption.category.toLowerCase().includes(lowercasedSearch) ||
             (caption.hashtags &&
               caption.hashtags.some((tag) =>
-                tag.toLowerCase().includes(lowercasedSearch)
+                typeof tag === 'string' && tag.toLowerCase().includes(lowercasedSearch)
               ))
         )
       );
     }
   }, [searchTerm, savedCaptions]);
 
-  if (!isLoaded || isFirebaseLoading) {
+  if (!isLoaded || isFirebaseLoading || isLoadingCaptions) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -110,7 +138,7 @@ export default function SavedCaptions() {
                 >
                   {filteredCaptions.map((caption, index) => (
                     <CaptionCard 
-                      key={caption.id} 
+                      key={caption.id || index} 
                       caption={caption} 
                       index={index} 
                       isSavedCaption={true} 
@@ -129,7 +157,7 @@ export default function SavedCaptions() {
                       : "You haven't saved any captions yet. Generate some captions and save them to see them here."}
                   </p>
                   <button
-                    onClick={() => window.location.href = '/dashboard'}
+                    onClick={() => window.location.href = '/'}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
                   >
                     Generate Captions

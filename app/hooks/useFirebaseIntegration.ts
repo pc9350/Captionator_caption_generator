@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { useCaptionStore } from '../store/captionStore';
 import { 
   getSavedCaptions, 
-  saveCaption,
-  deleteCaption,
+  saveCaption as saveCaptionToFirebase,
+  deleteCaption as deleteCaptionFromFirebase,
   saveCaptionGenerationHistory,
   getCaptionHistory
 } from '../utils/firebaseUtils';
@@ -27,6 +27,13 @@ export const useFirebaseIntegration = () => {
   // Check if Firebase is properly initialized
   const isFirebaseAvailable = isFirebaseInitialized();
 
+  // Load saved captions when user signs in
+  useEffect(() => {
+    if (isSignedIn && user && isFirebaseAvailable) {
+      handleGetSavedCaptions();
+    }
+  }, [isSignedIn, user, isFirebaseAvailable]);
+
   const handleSaveCaption = useCallback(async (caption: Caption) => {
     if (!isSignedIn || !user) {
       setError('You must be signed in to save captions');
@@ -42,7 +49,7 @@ export const useFirebaseIntegration = () => {
     try {
       setIsLoading(true);
       setError(null);
-      const savedCaption = await saveCaption(user.id, caption);
+      const savedCaption = await saveCaptionToFirebase(user.id, caption);
       return savedCaption;
     } catch (err) {
       console.error('Error saving caption:', err);
@@ -68,7 +75,7 @@ export const useFirebaseIntegration = () => {
     try {
       setIsLoading(true);
       setError(null);
-      await deleteCaption(captionId);
+      await deleteCaptionFromFirebase(captionId);
       return true;
     } catch (err) {
       console.error('Error deleting caption:', err);
