@@ -1,9 +1,12 @@
-import { useRef, useState, useCallback } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Canvas } from '@react-three/fiber';
-import { useGLTF, PresentationControls, Environment, Float } from '@react-three/drei';
-import { FiUpload, FiImage, FiX, FiAlertCircle, FiPlus, FiCamera, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import { useGLTF, PresentationControls, Environment, Float, Text } from '@react-three/drei';
+import { 
+  FiUpload, FiImage, FiX, FiAlertCircle, FiPlus, FiCamera, 
+  FiChevronLeft, FiChevronRight, FiMaximize2, FiGrid, FiLayers
+} from 'react-icons/fi';
 import Lottie from 'lottie-react';
 import { useImageUpload } from '../hooks/useImageUpload';
 import { useCaptionStore } from '../store/captionStore';
@@ -22,7 +25,16 @@ export default function ImageUploader() {
   const { selectedImage, imageUrl, isUploading, uploadProgress, uploadedImages } = useCaptionStore();
   const [isDragging, setIsDragging] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [isGridView, setIsGridView] = useState(false);
+  const [showFullscreen, setShowFullscreen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Update active image index when uploaded images change
+  useEffect(() => {
+    if (uploadedImages.length > 0 && activeImageIndex >= uploadedImages.length) {
+      setActiveImageIndex(uploadedImages.length - 1);
+    }
+  }, [uploadedImages, activeImageIndex]);
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
@@ -85,8 +97,56 @@ export default function ImageUploader() {
     }
   };
 
+  // Delete specific image
+  const deleteImage = (index: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (uploadedImages.length > 0 && index >= 0 && index < uploadedImages.length) {
+      // Create a new array without the image at the specified index
+      const newImages = [...uploadedImages];
+      
+      // Revoke the object URL to prevent memory leaks
+      if (newImages[index].url) {
+        URL.revokeObjectURL(newImages[index].url);
+      }
+      
+      // Remove the image from the array
+      newImages.splice(index, 1);
+      
+      // Update the store with the new array
+      useCaptionStore.setState({ uploadedImages: newImages });
+      
+      // If we deleted the active image, adjust the active index
+      if (index === activeImageIndex) {
+        // If it was the last image, go to the previous one
+        if (index === uploadedImages.length - 1 && index > 0) {
+          setActiveImageIndex(index - 1);
+        } else if (uploadedImages.length === 1) {
+          // If it was the only image, reset everything
+          resetUpload();
+        }
+        // Otherwise, keep the same index (which will now point to the next image)
+      } else if (index < activeImageIndex) {
+        // If we deleted an image before the active one, adjust the index
+        setActiveImageIndex(activeImageIndex - 1);
+      }
+    }
+  };
+
+  // Toggle fullscreen preview
+  const toggleFullscreen = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowFullscreen(!showFullscreen);
+  };
+
+  // Toggle grid view
+  const toggleGridView = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsGridView(!isGridView);
+  };
+
   // Get the current active image URL
-  const activeImageUrl = uploadedImages.length > 0 ? uploadedImages[activeImageIndex].url : null;
+  const activeImageUrl = uploadedImages.length > 0 ? uploadedImages[activeImageIndex]?.url : null;
 
   return (
     <div className="w-full max-w-3xl mx-auto">
@@ -124,32 +184,11 @@ export default function ImageUploader() {
           title="Upload images"
         />
         
-        {/* 3D Canvas Background */}
-        <div className="absolute inset-0 z-0">
-          <Canvas camera={{ position: [0, 0, 5], fov: 45 }}>
-            <ambientLight intensity={0.5} />
-            <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} />
-            <PresentationControls
-              global
-              zoom={0.8}
-              rotation={[0, 0, 0]}
-              polar={[-Math.PI / 4, Math.PI / 4]}
-              azimuth={[-Math.PI / 4, Math.PI / 4]}
-            >
-              <Float rotationIntensity={0.2}>
-                {/* Replace with your 3D model or use a simple mesh */}
-                <mesh scale={[2, 2, 0.2]} rotation={[0, 0, 0]}>
-                  <boxGeometry args={[1, 1, 0.1]} />
-                  <meshStandardMaterial 
-                    color={isDragging ? "#3b82f6" : "#1e293b"} 
-                    metalness={0.8}
-                    roughness={0.2}
-                  />
-                </mesh>
-              </Float>
-            </PresentationControls>
-            <Environment preset="city" />
-          </Canvas>
+        {/* Background */}
+        <div className="absolute inset-0 z-0 bg-gradient-to-br from-gray-900 to-black">
+          {uploadedImages.length === 0 && !isUploading && (
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(59,130,246,0.1),_transparent_70%)]"></div>
+          )}
         </div>
 
         {/* Overlay Content */}
@@ -233,57 +272,151 @@ export default function ImageUploader() {
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.5 }}
               >
-                {activeImageUrl && (
-                  <motion.img 
-                    src={activeImageUrl} 
-                    alt={`Uploaded ${activeImageIndex + 1} of ${uploadedImages.length}`} 
-                    className="w-full h-full object-contain"
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    key={activeImageUrl}
-                    transition={{ duration: 0.3 }}
-                  />
-                )}
+                {/* View mode selector */}
+                <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20 bg-black/50 backdrop-blur-sm rounded-full p-1 flex space-x-1">
+                  <motion.button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsGridView(false);
+                    }}
+                    className={`p-2 rounded-full ${
+                      !isGridView ? 'bg-blue-500 text-white' : 'text-white/70 hover:text-white'
+                    }`}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    title="Carousel View"
+                  >
+                    <FiLayers size={16} />
+                  </motion.button>
+                  <motion.button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsGridView(true);
+                    }}
+                    className={`p-2 rounded-full ${
+                      isGridView ? 'bg-blue-500 text-white' : 'text-white/70 hover:text-white'
+                    }`}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    title="Grid View"
+                  >
+                    <FiGrid size={16} />
+                  </motion.button>
+                  <motion.button
+                    onClick={toggleFullscreen}
+                    className={`p-2 rounded-full text-white/70 hover:text-white`}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    aria-label="View fullscreen"
+                    title="Fullscreen View"
+                  >
+                    <FiMaximize2 size={16} />
+                  </motion.button>
+                </div>
                 
-                {/* Image navigation controls */}
-                {uploadedImages.length > 1 && (
-                  <>
-                    <motion.button
-                      onClick={showPrevImage}
-                      className="absolute left-4 top-1/2 transform -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70 transition-colors"
-                      whileHover={{ scale: 1.1, backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
-                      whileTap={{ scale: 0.9 }}
-                    >
-                      <FiChevronLeft className="w-5 h-5" />
-                    </motion.button>
-                    
-                    <motion.button
-                      onClick={showNextImage}
-                      className="absolute right-4 top-1/2 transform -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70 transition-colors"
-                      whileHover={{ scale: 1.1, backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
-                      whileTap={{ scale: 0.9 }}
-                    >
-                      <FiChevronRight className="w-5 h-5" />
-                    </motion.button>
-                    
-                    <div className="absolute bottom-4 left-0 right-0 flex justify-center items-center space-x-2">
-                      {uploadedImages.map((_, index) => (
-                        <motion.button
-                          key={index}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setActiveImageIndex(index);
-                          }}
-                          className={`w-2.5 h-2.5 rounded-full ${
-                            index === activeImageIndex ? 'bg-white' : 'bg-white/40'
-                          }`}
-                          whileHover={{ scale: 1.2 }}
-                          whileTap={{ scale: 0.8 }}
-                          aria-label={`View image ${index + 1}`}
+                {/* Grid View */}
+                {isGridView ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-6 w-full h-full overflow-y-auto">
+                    {uploadedImages.map((image, index) => (
+                      <motion.div
+                        key={index}
+                        className={`relative rounded-lg overflow-hidden cursor-pointer h-32 bg-gray-800 ${
+                          index === activeImageIndex ? 'ring-2 ring-blue-500' : ''
+                        }`}
+                        whileHover={{ scale: 1.05, zIndex: 10 }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveImageIndex(index);
+                        }}
+                      >
+                        <img
+                          src={image.url}
+                          alt={`Uploaded ${index + 1}`}
+                          className="w-full h-full object-cover"
+                          style={{ objectFit: 'cover' }}
                         />
-                      ))}
+                        <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-30 transition-all duration-200 flex items-center justify-center">
+                          <motion.button
+                            initial={{ opacity: 0 }}
+                            whileHover={{ opacity: 1 }}
+                            className="p-1.5 bg-red-500 rounded-full text-white absolute top-1 right-1"
+                            onClick={(e) => deleteImage(index, e)}
+                          >
+                            <FiX size={14} />
+                          </motion.button>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                ) : (
+                  // Carousel View
+                  <div className="w-full h-full relative">
+                    <div className="w-full h-full flex items-center justify-center">
+                      <AnimatePresence mode="wait">
+                        <motion.div
+                          key={activeImageIndex}
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.8 }}
+                          transition={{ duration: 0.3 }}
+                          className="w-full h-full flex items-center justify-center p-4"
+                        >
+                          <img
+                            src={activeImageUrl || ''}
+                            alt={`Uploaded ${activeImageIndex + 1} of ${uploadedImages.length}`}
+                            className="max-w-full max-h-full object-contain rounded-lg shadow-lg"
+                            style={{ 
+                              filter: 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1))',
+                            }}
+                          />
+                        </motion.div>
+                      </AnimatePresence>
                     </div>
-                  </>
+
+                    {/* Image navigation controls */}
+                    {uploadedImages.length > 1 && (
+                      <>
+                        <motion.button
+                          onClick={showPrevImage}
+                          className="absolute left-4 top-1/2 transform -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70 transition-colors"
+                          whileHover={{ scale: 1.1, backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
+                          whileTap={{ scale: 0.9 }}
+                        >
+                          <FiChevronLeft className="w-5 h-5" />
+                        </motion.button>
+                        
+                        <motion.button
+                          onClick={showNextImage}
+                          className="absolute right-4 top-1/2 transform -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70 transition-colors"
+                          whileHover={{ scale: 1.1, backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
+                          whileTap={{ scale: 0.9 }}
+                        >
+                          <FiChevronRight className="w-5 h-5" />
+                        </motion.button>
+                      </>
+                    )}
+                    
+                    {/* Pagination dots */}
+                    {uploadedImages.length > 1 && (
+                      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex justify-center items-center space-x-2">
+                        {uploadedImages.map((_, index) => (
+                          <motion.button
+                            key={index}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveImageIndex(index);
+                            }}
+                            className={`w-2.5 h-2.5 rounded-full ${
+                              index === activeImageIndex ? 'bg-white' : 'bg-white/40'
+                            }`}
+                            whileHover={{ scale: 1.2 }}
+                            whileTap={{ scale: 0.8 }}
+                            aria-label={`View image ${index + 1}`}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 )}
                 
                 {/* Image count indicator */}
@@ -291,41 +424,95 @@ export default function ImageUploader() {
                   {activeImageIndex + 1} / {uploadedImages.length}
                 </div>
                 
-                {/* Add more images button */}
-                <motion.button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleSelectImage();
-                  }}
-                  className="absolute bottom-4 right-4 w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-lg"
-                  whileHover={{ 
-                    scale: 1.1,
-                    boxShadow: '0 10px 25px -5px rgba(59, 130, 246, 0.5), 0 8px 10px -6px rgba(59, 130, 246, 0.3)'
-                  }}
-                  whileTap={{ scale: 0.9 }}
-                  aria-label="Add more images"
-                >
-                  <FiPlus className="w-6 h-6" />
-                </motion.button>
-                
-                {/* Remove current image button */}
-                <motion.button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    resetUpload();
-                  }}
-                  className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white"
-                  whileHover={{ scale: 1.1, backgroundColor: 'rgba(239, 68, 68, 0.7)' }}
-                  whileTap={{ scale: 0.9 }}
-                  aria-label="Remove images"
-                >
-                  <FiX className="w-5 h-5" />
-                </motion.button>
+                {/* Action buttons */}
+                <div className="absolute bottom-4 right-4 flex space-x-2">
+                  {/* Add more images button */}
+                  <motion.button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSelectImage();
+                    }}
+                    className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-lg"
+                    whileHover={{ 
+                      scale: 1.1,
+                      boxShadow: '0 10px 25px -5px rgba(59, 130, 246, 0.5), 0 8px 10px -6px rgba(59, 130, 246, 0.3)'
+                    }}
+                    whileTap={{ scale: 0.9 }}
+                    aria-label="Add more images"
+                  >
+                    <FiPlus className="w-5 h-5" />
+                  </motion.button>
+                  
+                  {/* Remove all images button */}
+                  <motion.button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      resetUpload();
+                    }}
+                    className="w-10 h-10 rounded-full bg-red-500/80 flex items-center justify-center text-white shadow-lg"
+                    whileHover={{ 
+                      scale: 1.1,
+                      backgroundColor: 'rgba(239, 68, 68, 0.9)'
+                    }}
+                    whileTap={{ scale: 0.9 }}
+                    aria-label="Remove all images"
+                  >
+                    <FiX className="w-5 h-5" />
+                  </motion.button>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
       </div>
+
+      {/* Fullscreen preview modal */}
+      {showFullscreen && activeImageUrl && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+          onClick={() => setShowFullscreen(false)}
+        >
+          <img
+            src={activeImageUrl}
+            alt="Fullscreen preview"
+            className="max-w-full max-h-full object-contain"
+          />
+          <button
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/50 flex items-center justify-center text-white"
+            onClick={() => setShowFullscreen(false)}
+            aria-label="Close fullscreen preview"
+          >
+            <FiX className="w-6 h-6" />
+          </button>
+          
+          {/* Fullscreen navigation controls */}
+          {uploadedImages.length > 1 && (
+            <>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  showPrevImage(e);
+                }}
+                className="absolute left-4 top-1/2 transform -translate-y-1/2 w-12 h-12 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70 transition-colors"
+                aria-label="Previous image"
+              >
+                <FiChevronLeft className="w-6 h-6" />
+              </button>
+              
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  showNextImage(e);
+                }}
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 w-12 h-12 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70 transition-colors"
+                aria-label="Next image"
+              >
+                <FiChevronRight className="w-6 h-6" />
+              </button>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Error message */}
       <AnimatePresence>
