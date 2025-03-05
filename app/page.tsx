@@ -1,6 +1,7 @@
 import Link from 'next/link';
-import { FiCamera, FiHash, FiSmile, FiSliders, FiShare2 } from 'react-icons/fi';
+import { FiCamera, FiHash, FiSmile, FiSliders, FiShare2, FiChevronDown } from 'react-icons/fi';
 import AnimatedCaptionShowcase from './components/AnimatedCaptionShowcase';
+import Image from 'next/image';
 
 // Sample captions for the animation
 const sampleCaptions = [
@@ -11,16 +12,25 @@ const sampleCaptions = [
   "Finding beauty in the everyday moments 🌿"
 ];
 
+// Second set of captions
+const secondaryCaptions = [
+  "Adventure awaits, just around the corner 🗺️",
+  "Collecting moments, not things 💫",
+  "Life is better with friends who wag their tails 🐾",
+  "Happiness is a warm puppy 🐶",
+  "Weekend vibes with my best friend 🌈"
+];
+
 export default function Home() {
   return (
     <div className="bg-white dark:bg-gray-900">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden py-20 sm:py-32">
+      {/* Hero Section - Full height */}
+      <section className="relative min-h-screen flex flex-col justify-center overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800"></div>
         <div className="absolute inset-0 bg-grid-slate-900/[0.04] dark:bg-grid-slate-100/[0.03] bg-[center_top_-1px]"></div>
         
-        <div className="relative container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+        <div className="relative container mx-auto px-4 sm:px-6 lg:px-8 flex-grow flex items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center w-full">
             <div>
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-gray-900 dark:text-white mb-6">
                 <span className="block">AI-Powered</span>
@@ -50,33 +60,55 @@ export default function Home() {
               <div className="w-full h-[500px] bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/20 dark:to-purple-900/20 rounded-2xl shadow-2xl overflow-hidden">
                 <div className="absolute inset-0 bg-grid-slate-900/[0.02] dark:bg-grid-slate-100/[0.03]"></div>
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-64 h-64 bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 transform rotate-3 transition-transform hover:rotate-0 duration-300">
-                    <div className="w-full h-40 bg-gray-200 dark:bg-gray-700 rounded-lg mb-4"></div>
-                    <div className="space-y-2">
-                      <AnimatedCaptionShowcase captions={sampleCaptions} />
-                    </div>
-                  </div>
-                  <div className="w-64 h-64 bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 transform -rotate-3 transition-transform hover:rotate-0 duration-300 absolute -bottom-20 -right-10">
-                    <div className="w-full h-40 bg-gray-200 dark:bg-gray-700 rounded-lg mb-4"></div>
-                    <div className="space-y-2">
-                      <AnimatedCaptionShowcase 
-                        captions={sampleCaptions.slice().reverse()} 
-                        typingSpeed={70}
-                        pauseDuration={1800}
+                  {/* Main polaroid with caption */}
+                  <div className="w-72 h-96 bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 transform rotate-3 transition-transform hover:rotate-0 duration-300">
+                    <div className="w-full h-64 bg-gray-200 dark:bg-gray-700 rounded-lg mb-4 overflow-hidden">
+                      {/* Using the hot-air-balloons.jpg image */}
+                      <Image 
+                        src="/images/hot-air-balloons.jpg" 
+                        alt="Hot air balloons in the sky" 
+                        width={500} 
+                        height={500} 
+                        className="w-full h-full object-cover"
                       />
+                    </div>
+                    <div className="space-y-1">
+                      <AnimatedCaptionShowcase captions={sampleCaptions} />
                     </div>
                   </div>
                 </div>
               </div>
-              <div className="absolute -bottom-6 -right-6 w-48 h-48 bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 transform -rotate-6 transition-transform hover:rotate-0 duration-300">
-                <div className="w-full h-24 bg-gray-200 dark:bg-gray-700 rounded-lg mb-4"></div>
-                <div className="space-y-2">
-                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full w-3/4"></div>
-                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full w-1/2"></div>
+              
+              {/* Small polaroid on the side with caption */}
+              <div className="absolute -bottom-6 -right-6 w-56 h-72 bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 transform -rotate-6 transition-transform hover:rotate-0 duration-300">
+                <div className="w-full h-40 bg-gray-200 dark:bg-gray-700 rounded-lg mb-4 overflow-hidden">
+                  {/* Using the dogs.jpg image */}
+                  <Image 
+                    src="/images/dogs.jpg" 
+                    alt="Cute dogs" 
+                    width={500} 
+                    height={500} 
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <AnimatedCaptionShowcase 
+                    captions={secondaryCaptions} 
+                    typingSpeed={70}
+                    pauseDuration={1800}
+                  />
                 </div>
               </div>
             </div>
           </div>
+        </div>
+        
+        {/* Scroll down arrow */}
+        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex flex-col items-center animate-bounce">
+          <span className="text-gray-600 dark:text-gray-300 text-sm mb-2">Scroll Down</span>
+          <a href="#features" className="text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+            <FiChevronDown className="w-6 h-6" />
+          </a>
         </div>
       </section>
 
