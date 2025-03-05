@@ -5,6 +5,7 @@ import { FiCamera, FiHash, FiSmile, FiSliders, FiShare2, FiChevronDown, FiHeart,
 import AnimatedCaptionShowcase from './components/AnimatedCaptionShowcase';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
+import FeaturesSection from './components/FeaturesSection';
 
 // Sample captions for the animation
 const sampleCaptions = [
@@ -255,100 +256,7 @@ export default function Home() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 bg-gray-50 dark:bg-gray-800">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-              Powerful Features
-            </h2>
-            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              Everything you need to create engaging Instagram captions that drive engagement and growth.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {/* Feature 1 */}
-            <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-8 transition-transform hover:-translate-y-1 duration-300">
-              <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-6">
-                <FiCamera className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-                AI Image Analysis
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                Our AI analyzes your images to detect objects, scenes, emotions, and themes to generate contextually relevant captions.
-              </p>
-            </div>
-
-            {/* Feature 2 */}
-            <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-8 transition-transform hover:-translate-y-1 duration-300">
-              <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mb-6">
-                <FiHash className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-                Hashtag Suggestions
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                Get relevant hashtag suggestions to increase your post's reach and engagement on Instagram.
-              </p>
-            </div>
-
-            {/* Feature 3 */}
-            <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-8 transition-transform hover:-translate-y-1 duration-300">
-              <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-6">
-                <FiSmile className="w-6 h-6 text-green-600 dark:text-green-400" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-                Emoji Suggestions
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                Add personality to your captions with AI-suggested emojis that match the mood and content of your image.
-              </p>
-            </div>
-
-            {/* Feature 4 */}
-            <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-8 transition-transform hover:-translate-y-1 duration-300">
-              <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-6">
-                <FiSliders className="w-6 h-6 text-red-600 dark:text-red-400" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-                Tone Customization
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                Choose from multiple caption tones including Witty, Aesthetic, Deep, Trendy, and Minimal to match your personal style.
-              </p>
-            </div>
-
-            {/* Feature 5 */}
-            <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-8 transition-transform hover:-translate-y-1 duration-300">
-              <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-full flex items-center justify-center mb-6">
-                <FiShare2 className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-                One-Click Sharing
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                Copy your generated caption with a single click or share directly to Instagram and other social platforms.
-              </p>
-            </div>
-
-            {/* Feature 6 */}
-            <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-8 transition-transform hover:-translate-y-1 duration-300">
-              <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mb-6">
-                <svg className="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-                Caption Templates
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                Access templates for special occasions like birthdays, travel, food, fitness, and more to quickly generate themed captions.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
+      <FeaturesSection />
 
       {/* CTA Section */}
       <section className="py-20">

@@ -230,7 +230,7 @@ export default function ImageUploader() {
         // Process all uploaded files
         for (const file of acceptedFiles) {
           if (file.type.startsWith("image/")) {
-            await uploadImage(file);
+          await uploadImage(file);
           }
         }
       }
@@ -414,7 +414,7 @@ export default function ImageUploader() {
         onDragLeave={handleDragLeave}
       >
         <input {...getInputProps()} />
-        <input
+        <input 
           type="file"
           ref={fileInputRef}
           className="hidden"
@@ -436,55 +436,55 @@ export default function ImageUploader() {
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center p-6 bg-black/30 backdrop-blur-sm">
           <AnimatePresence mode="wait">
             {uploadedImages.length === 0 && !isUploading ? (
-              <motion.div
+            <motion.div
                 key="upload-prompt"
-                className="flex flex-col items-center justify-center text-white"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
+              className="flex flex-col items-center justify-center text-white"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.5 }}
-              >
-                <motion.div
+              transition={{ duration: 0.5 }}
+            >
+              <motion.div
                   className="w-24 h-24 mb-6 rounded-full bg-white/10 flex items-center justify-center"
-                  animate={{
-                    scale: isDragActive ? 1.1 : 1,
+                animate={{ 
+                  scale: isDragActive ? 1.1 : 1,
                     backgroundColor: isDragActive
                       ? "rgba(59, 130, 246, 0.2)"
                       : "rgba(255, 255, 255, 0.1)",
-                  }}
+                }}
                   whileHover={{ scale: 1.05 }}
-                >
+              >
                   <FiUpload className="w-10 h-10 text-white" />
-                </motion.div>
+              </motion.div>
                 <h3 className="text-2xl font-bold mb-3">
                   {isDragActive
                     ? "Drop your images here"
                     : "Drag & Drop your images"}
-                </h3>
+              </h3>
                 <p className="text-white/70 text-center max-w-md mb-6">
                   Upload high-quality images to generate Instagram captions that
                   match your content perfectly
-                </p>
-                <motion.button
-                  onClick={(e) => {
+              </p>
+              <motion.button
+                onClick={(e) => {
                     e.stopPropagation(); // Stop event propagation
-                    handleSelectImage();
-                  }}
+                  handleSelectImage();
+                }}
                   className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full font-medium text-white shadow-lg"
                   whileHover={{
                     scale: 1.05,
                     boxShadow:
                       "0 10px 25px -5px rgba(59, 130, 246, 0.5), 0 8px 10px -6px rgba(59, 130, 246, 0.3)",
                   }}
-                  whileTap={{ scale: 0.95 }}
-                >
+                whileTap={{ scale: 0.95 }}
+              >
                   Select Images
-                </motion.button>
+              </motion.button>
                 <div className="mt-6 flex items-center text-white/60 text-sm">
                   <FiImage className="mr-2" /> Supports JPG, PNG, GIF, WEBP
                 </div>
-              </motion.div>
-            ) : isUploading ? (
+            </motion.div>
+          ) : isUploading ? (
               <motion.div
                 key="uploading"
                 className="flex flex-col items-center justify-center text-white"
@@ -493,10 +493,10 @@ export default function ImageUploader() {
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.5 }}
               >
-                <div className="w-64 h-64 mb-4">
-                  <Lottie
-                    animationData={uploadAnimation}
-                    loop={true}
+              <div className="w-64 h-64 mb-4">
+                <Lottie 
+                  animationData={uploadAnimation} 
+                  loop={true}
                     style={{ width: "100%", height: "100%" }}
                   />
                 </div>
@@ -506,8 +506,8 @@ export default function ImageUploader() {
                     initial={{ width: 0 }}
                     animate={{ width: `${uploadProgress}%` }}
                     transition={{ duration: 0.3 }}
-                  />
-                </div>
+                />
+              </div>
                 <p className="text-white/90 font-medium text-lg">
                   Uploading... {Math.round(uploadProgress)}%
                 </p>
@@ -589,13 +589,13 @@ export default function ImageUploader() {
                                 console.error('Image failed to load:', e);
                                 e.currentTarget.src = '/fallback.svg';
                               }}
-                            />
-                          </div>
+                />
+              </div>
                         </div>
                       );
                     })}
-                  </div>
-                ) : (
+            </div>
+          ) : (
                   // Carousel View
                   <div className="relative w-full h-full flex items-center justify-center">
                     {/* Navigation buttons */}
@@ -763,7 +763,7 @@ export default function ImageUploader() {
                 <FiChevronLeft className="w-6 h-6" />
               </button>
 
-              <button
+              <button 
                 onClick={(e) => {
                   e.stopPropagation();
                   showNextImage(e);
@@ -797,4 +797,4 @@ export default function ImageUploader() {
       </AnimatePresence>
     </div>
   );
-}
+} 
