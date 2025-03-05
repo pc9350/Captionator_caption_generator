@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { FiCheck } from 'react-icons/fi';
 
@@ -26,6 +26,11 @@ const toneOptions = [
     description: 'Humorous, witty, and entertaining',
   },
   {
+    value: 'cool',
+    label: 'Cool & Attitude',
+    description: 'Edgy, confident, and trendsetting',
+  },
+  {
     value: 'inspirational',
     label: 'Inspirational',
     description: 'Uplifting, motivational, and positive',
@@ -38,19 +43,34 @@ const toneOptions = [
 ];
 
 export default function ToneSelector({ selectedTone, onToneChange }: ToneSelectorProps) {
+  // Ensure onToneChange is a function before using it
+  const handleToneChange = useCallback((value: string) => {
+    console.log('ToneSelector: handleToneChange called with value:', value);
+    console.log('ToneSelector: onToneChange type:', typeof onToneChange);
+    
+    if (typeof onToneChange === 'function') {
+      onToneChange(value);
+    } else {
+      console.error('onToneChange is not a function');
+    }
+  }, [onToneChange]);
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
       {toneOptions.map((tone) => (
         <motion.div
           key={tone.value}
-          whileHover={{ scale: 1.02 }}
+          whileHover={{ scale: 1.02, boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}
           whileTap={{ scale: 0.98 }}
-          className={`p-4 rounded-lg cursor-pointer border-2 transition-colors ${
+          className={`p-4 rounded-lg cursor-pointer border-2 transition-all ${
             selectedTone === tone.value
               ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-400'
               : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
           }`}
-          onClick={() => onToneChange(tone.value)}
+          onClick={() => {
+            console.log('Clicked on tone:', tone.value);
+            handleToneChange(tone.value);
+          }}
         >
           <div className="flex items-start justify-between">
             <div>

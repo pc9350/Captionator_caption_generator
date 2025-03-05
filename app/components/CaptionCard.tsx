@@ -23,6 +23,12 @@ export default function CaptionCard({ caption, index, isSavedCaption = false }: 
   const { saveCaption, deleteCaption } = useFirebaseIntegration();
   const { isSignedIn } = useUser();
 
+  // Ensure hashtags and emojis are arrays of strings
+  const hashtags = Array.isArray(caption.hashtags) 
+    ? caption.hashtags.filter((tag): tag is string => typeof tag === 'string')
+    : [];
+  const emojis = caption.emojis || [];
+
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(caption.text);
@@ -63,6 +69,12 @@ export default function CaptionCard({ caption, index, isSavedCaption = false }: 
 
   const handleDelete = async () => {
     if (!isSignedIn) return;
+    
+    // Check if caption has an id before attempting to delete
+    if (!caption.id) {
+      console.error('Cannot delete caption: No ID provided');
+      return;
+    }
     
     setIsDeleting(true);
     try {
@@ -170,26 +182,18 @@ export default function CaptionCard({ caption, index, isSavedCaption = false }: 
           </p>
         </div>
         
-        {caption.hashtags && caption.hashtags.length > 0 && (
+        {hashtags.length > 0 && (
           <div className="mb-3">
             <div className="flex flex-wrap gap-2">
-              {caption.hashtags.map((hashtag, idx) => (
+              {hashtags.map((hashtag, idx) => (
                 <span 
                   key={idx} 
                   className="text-sm text-blue-600 dark:text-blue-400"
                 >
-                  #{hashtag}
+                  #{hashtag.replace(/^#/, '')}
                 </span>
               ))}
             </div>
-          </div>
-        )}
-        
-        {caption.emojis && caption.emojis.length > 0 && (
-          <div className="text-lg">
-            {caption.emojis.map((emoji, idx) => (
-              <span key={idx} className="mr-1">{emoji}</span>
-            ))}
           </div>
         )}
       </div>

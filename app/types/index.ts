@@ -30,7 +30,8 @@ export type CaptionTone =
   | 'Aesthetic & Artsy'
   | 'Deep & Thoughtful'
   | 'Trend & Pop Culture-Based'
-  | 'Minimal & Classy';
+  | 'Minimal & Classy'
+  | 'Cool & Attitude';
 
 export interface User {
   id: string;

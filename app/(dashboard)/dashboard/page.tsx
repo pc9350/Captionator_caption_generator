@@ -12,6 +12,12 @@ import CaptionResults from '@/app/components/CaptionResults';
 export default function Dashboard() {
   const { isSignedIn, user, isLoaded } = useUser();
   const [showOptions, setShowOptions] = useState(false);
+  const [selectedTone, setSelectedTone] = useState('casual');
+
+  const handleToneChange = (tone: string) => {
+    console.log('Dashboard: tone changed to', tone);
+    setSelectedTone(tone);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12">
@@ -75,7 +81,7 @@ export default function Dashboard() {
                     exit={{ opacity: 0, height: 0 }}
                     transition={{ duration: 0.3 }}
                   >
-                    <ToneSelector />
+                    <ToneSelector selectedTone={selectedTone} onToneChange={handleToneChange} />
                     <CaptionOptions />
                   </motion.div>
                 )}

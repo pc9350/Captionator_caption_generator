@@ -1,12 +1,20 @@
 import { create } from 'zustand';
 import { Caption, CaptionCategory, CaptionTone } from '../types';
 
+// Define the uploaded image type
+interface UploadedImage {
+  file: File;
+  url: string;  // Blob URL for UI display
+  base64: string; // Base64 string for API requests
+}
+
 interface CaptionState {
   // Image state
   selectedImage: File | null;
   imageUrl: string | null;
   isUploading: boolean;
   uploadProgress: number;
+  uploadedImages: UploadedImage[];
   
   // Caption generation state
   generatedCaptions: Caption[];
@@ -24,6 +32,8 @@ interface CaptionState {
   setImageUrl: (url: string | null) => void;
   setIsUploading: (isUploading: boolean) => void;
   setUploadProgress: (progress: number) => void;
+  addUploadedImage: (image: UploadedImage) => void;
+  clearUploadedImages: () => void;
   setGeneratedCaptions: (captions: Caption[]) => void;
   addGeneratedCaption: (caption: Caption) => void;
   setSelectedCategory: (category: CaptionCategory | 'All') => void;
@@ -42,6 +52,7 @@ export const useCaptionStore = create<CaptionState>((set) => ({
   imageUrl: null,
   isUploading: false,
   uploadProgress: 0,
+  uploadedImages: [],
   generatedCaptions: [],
   selectedCategory: 'All',
   selectedTone: 'Aesthetic & Artsy',
@@ -55,6 +66,11 @@ export const useCaptionStore = create<CaptionState>((set) => ({
   setImageUrl: (url) => set({ imageUrl: url }),
   setIsUploading: (isUploading) => set({ isUploading }),
   setUploadProgress: (progress) => set({ uploadProgress: progress }),
+  addUploadedImage: (image) => 
+    set((state) => ({ 
+      uploadedImages: [...state.uploadedImages, image] 
+    })),
+  clearUploadedImages: () => set({ uploadedImages: [] }),
   setGeneratedCaptions: (captions) => set({ generatedCaptions: captions }),
   addGeneratedCaption: (caption) => 
     set((state) => ({ 
@@ -78,6 +94,7 @@ export const useCaptionStore = create<CaptionState>((set) => ({
     imageUrl: null,
     isUploading: false,
     uploadProgress: 0,
+    uploadedImages: [],
     generatedCaptions: [],
     isGenerating: false,
   }),

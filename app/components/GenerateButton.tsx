@@ -3,27 +3,35 @@ import { FiZap } from 'react-icons/fi';
 import { useCaptionGeneration } from '../hooks/useCaptionGeneration';
 import { useCaptionStore } from '../store/captionStore';
 
-export default function GenerateButton() {
+export default function GenerateButton({ tone = 'Casual' }: { tone?: string }) {
   const { generateCaptions, error } = useCaptionGeneration();
-  const { isGenerating, imageUrl } = useCaptionStore();
+  const { 
+    isGenerating, 
+    uploadedImages, 
+    includeHashtags,
+    includeEmojis
+  } = useCaptionStore();
 
   const handleGenerate = async () => {
-    if (!imageUrl) return;
-    await generateCaptions();
+    if (!uploadedImages || uploadedImages.length === 0) return;
+    await generateCaptions(tone);
   };
+
+  // Check if images are available for caption generation
+  const hasImages = uploadedImages && uploadedImages.length > 0;
 
   return (
     <div className="w-full max-w-md">
       <motion.button
         onClick={handleGenerate}
-        disabled={isGenerating || !imageUrl}
+        disabled={isGenerating || !hasImages}
         className={`w-full flex items-center justify-center px-6 py-3 rounded-lg font-medium text-white shadow-lg ${
-          !imageUrl
+          !hasImages
             ? 'bg-gray-400 cursor-not-allowed'
             : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700'
         }`}
-        whileHover={imageUrl ? { scale: 1.02 } : {}}
-        whileTap={imageUrl ? { scale: 0.98 } : {}}
+        whileHover={hasImages ? { scale: 1.02 } : {}}
+        whileTap={hasImages ? { scale: 0.98 } : {}}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}

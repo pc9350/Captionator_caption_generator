@@ -10,6 +10,7 @@ import {
   saveCaptionGenerationHistory,
   getCaptionHistory
 } from '../utils/firebaseUtils';
+import { isFirebaseInitialized } from '../firebase/config';
 import { Caption, CaptionHistory } from '../types';
 
 export const useFirebaseIntegration = () => {
@@ -22,10 +23,19 @@ export const useFirebaseIntegration = () => {
   } = useCaptionStore();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Check if Firebase is properly initialized
+  const isFirebaseAvailable = isFirebaseInitialized();
 
   const handleSaveCaption = useCallback(async (caption: Caption) => {
     if (!isSignedIn || !user) {
       setError('You must be signed in to save captions');
+      return null;
+    }
+    
+    if (!isFirebaseAvailable) {
+      console.warn('Firebase is not properly initialized. Cannot save caption.');
+      setError('Firebase service is currently unavailable');
       return null;
     }
 
@@ -41,11 +51,17 @@ export const useFirebaseIntegration = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [isSignedIn, user]);
+  }, [isSignedIn, user, isFirebaseAvailable]);
 
   const handleDeleteCaption = useCallback(async (captionId: string) => {
     if (!isSignedIn || !user) {
       setError('You must be signed in to delete captions');
+      return false;
+    }
+    
+    if (!isFirebaseAvailable) {
+      console.warn('Firebase is not properly initialized. Cannot delete caption.');
+      setError('Firebase service is currently unavailable');
       return false;
     }
 
@@ -61,11 +77,17 @@ export const useFirebaseIntegration = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [isSignedIn, user]);
+  }, [isSignedIn, user, isFirebaseAvailable]);
 
   const handleGetSavedCaptions = useCallback(async () => {
     if (!isSignedIn || !user) {
       setError('You must be signed in to view saved captions');
+      return [];
+    }
+    
+    if (!isFirebaseAvailable) {
+      console.warn('Firebase is not properly initialized. Cannot get saved captions.');
+      setError('Firebase service is currently unavailable');
       return [];
     }
 
@@ -81,10 +103,15 @@ export const useFirebaseIntegration = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [isSignedIn, user]);
+  }, [isSignedIn, user, isFirebaseAvailable]);
 
   const handleSaveCaptionHistory = useCallback(async (imageUrl: string, captions: Caption[]) => {
     if (!isSignedIn || !user) {
+      return null;
+    }
+    
+    if (!isFirebaseAvailable) {
+      console.warn('Firebase is not properly initialized. Cannot save caption history.');
       return null;
     }
 
@@ -100,11 +127,17 @@ export const useFirebaseIntegration = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [isSignedIn, user]);
+  }, [isSignedIn, user, isFirebaseAvailable]);
 
   const handleGetCaptionHistory = useCallback(async () => {
     if (!isSignedIn || !user) {
       setError('You must be signed in to view caption history');
+      return [];
+    }
+    
+    if (!isFirebaseAvailable) {
+      console.warn('Firebase is not properly initialized. Cannot get caption history.');
+      setError('Firebase service is currently unavailable');
       return [];
     }
 
@@ -120,7 +153,7 @@ export const useFirebaseIntegration = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [isSignedIn, user]);
+  }, [isSignedIn, user, isFirebaseAvailable]);
 
   return {
     saveCaption: handleSaveCaption,
@@ -131,6 +164,7 @@ export const useFirebaseIntegration = () => {
     isLoading,
     error,
     isSignedIn,
-    user
+    user,
+    isFirebaseAvailable
   };
 }; 
