@@ -5,16 +5,11 @@ import type { NextRequest } from 'next/server';
 export function middleware(req: NextRequest) {
   // Block access to Firebase diagnostics in production
   if (process.env.NODE_ENV === 'production') {
-    const url = req.nextUrl.pathname;
-    
-    // Check if the request is for Firebase diagnostics
-    if (url.includes('/firebase-diagnostics')) {
-      // Redirect to home page
-      return NextResponse.redirect(new URL('/', req.url));
-    }
+    // Redirect to home page
+    return NextResponse.redirect(new URL('/', req.url));
   }
   
-  // Continue with the request
+  // Continue with the request in development mode
   return NextResponse.next();
 }
 
@@ -24,4 +19,4 @@ export const config = {
     '/firebase-diagnostics/:path*',
     '/api/firebase-diagnostics/:path*',
   ],
-};
+}; 

@@ -49,6 +49,12 @@ firebase-debug.log*
 firebase-debug.*.log*
 .firebase/
 
+# Firebase Diagnostics (Development Only)
+/app/utils/firebaseDiagnostics.ts
+/app/components/FirebaseDiagnostics.tsx
+/app/components/FirebaseDiagnosticsProvider.tsx
+/.diagnostics-backup/
+
 # Supabase
 .supabase/
 

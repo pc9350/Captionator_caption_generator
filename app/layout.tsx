@@ -4,8 +4,19 @@ import "./globals.css";
 import { ClerkProvider } from '@clerk/nextjs';
 import Header from './components/Header';
 import Footer from './components/Footer';
-import FirebaseDiagnosticsProvider from './components/FirebaseDiagnosticsProvider';
 import { Toaster } from "react-hot-toast";
+
+// Safely import FirebaseDiagnosticsProvider only in development mode
+// and only if the file exists
+let FirebaseDiagnosticsProvider = () => null;
+if (process.env.NODE_ENV === 'development') {
+  try {
+    // Using dynamic import to avoid build errors
+    FirebaseDiagnosticsProvider = require('./components/FirebaseDiagnosticsProvider')?.default || (() => null);
+  } catch (error) {
+    console.log('Firebase diagnostics not available. Run npm run toggle-diagnostics to enable.');
+  }
+}
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -29,7 +40,7 @@ export default function RootLayout({
               {children}
             </main>
             <Footer />
-            <FirebaseDiagnosticsProvider />
+            {process.env.NODE_ENV === 'development' && <FirebaseDiagnosticsProvider />}
             <Toaster 
               position="bottom-right"
               toastOptions={{
