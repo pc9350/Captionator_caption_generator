@@ -108,6 +108,71 @@ export const useImageUpload = () => {
     clearUploadedImages
   } = useCaptionStore();
 
+  // Helper function to regenerate a blob URL from a file if needed
+  const regenerateBlobUrl = (file: File): string => {
+    try {
+      // Create a new blob URL from the file
+      const newUrl = URL.createObjectURL(file);
+      console.log('Regenerated blob URL:', newUrl, 'for file:', file.name);
+      return newUrl;
+    } catch (err) {
+      console.error('Failed to regenerate blob URL:', err);
+      return '';
+    }
+  };
+
+  // Function to validate and fix blob URLs if needed
+  const validateBlobUrls = () => {
+    let needsUpdate = false;
+    const updatedImages = [...uploadedImages].map(img => {
+      // Check if the URL is a valid blob URL
+      const isBlobUrl = img.url && img.url.startsWith('blob:');
+      if (!isBlobUrl) {
+        console.warn('URL is not a blob URL:', img.url?.substring(0, 30) + '...');
+        return img;
+      }
+
+      // More reliable way to check if a blob URL is still valid
+      try {
+        // If the file is still available, regenerate the URL to be safe
+        if (img.file) {
+          console.log('Regenerating URL for image:', img.file.name);
+          needsUpdate = true;
+          // First revoke the old URL to prevent memory leaks
+          try {
+            URL.revokeObjectURL(img.url);
+          } catch (err) {
+            console.error('Error revoking URL:', err);
+          }
+          // Create a fresh blob URL
+          return {
+            ...img,
+            url: URL.createObjectURL(img.file)
+          };
+        }
+      } catch (error) {
+        console.error('Error validating blob URL:', error);
+      }
+      
+      return img;
+    });
+    
+    if (needsUpdate && updatedImages.length > 0) {
+      console.log('Updating store with regenerated URLs');
+      // Update store with fixed URLs
+      clearUploadedImages();
+      updatedImages.forEach(img => addUploadedImage(img));
+      
+      // Update current image URL if needed
+      if (imageUrl) {
+        const currentImgIndex = uploadedImages.findIndex(img => img.url === imageUrl);
+        if (currentImgIndex >= 0 && currentImgIndex < updatedImages.length) {
+          setImageUrl(updatedImages[currentImgIndex].url);
+        }
+      }
+    }
+  };
+
   const uploadImage = async (file: File): Promise<string | null> => {
     if (!file) return null;
 
@@ -118,6 +183,7 @@ export const useImageUpload = () => {
     }
 
     try {
+      console.log('Starting upload process for file:', file.name, 'size:', Math.round(file.size / 1024), 'KB');
       setIsUploading(true);
       setSelectedImage(file);
       setError(null);
@@ -133,12 +199,17 @@ export const useImageUpload = () => {
         setUploadProgress(progress);
       }, 200);
 
-      // Create a blob URL for display in the UI
+      // Create a persistent blob URL for display in the UI
+      // This URL will remain valid until explicitly revoked
       const imageUrl = URL.createObjectURL(file);
+      console.log('Created blob URL:', imageUrl, 'for file:', file.name);
       
       // Resize the image to reduce file size
       let resizedImage = await resizeImage(file);
+      console.log('Resized image successfully. Original size:', Math.round(file.size / 1024), 'KB');
+      
       let base64Image = await fileToBase64(new File([resizedImage], file.name, { type: 'image/jpeg' }));
+      console.log('Converted to base64, length:', base64Image.length.toString().substring(0, 6) + '...');
       
       // If the base64 is still too large, resize again with lower quality
       if (isBase64TooLarge(base64Image)) {
@@ -163,16 +234,38 @@ export const useImageUpload = () => {
       // Short delay to show 100% before completing
       await new Promise(resolve => setTimeout(resolve, 200));
       
-      // Add to uploaded images array and set current image
-      // Store both the blob URL for UI display and base64 for API requests
-      addUploadedImage({ 
+      // Create an object with all the image data
+      const uploadedImage = { 
         file, 
         url: imageUrl,
         base64: base64Image 
-      });
+      };
+      
+      console.log('Adding image to store with URL:', imageUrl.substring(0, 30) + '...');
+      
+      // Add to uploaded images array and set current image
+      // Store both the blob URL for UI display and base64 for API requests
+      addUploadedImage(uploadedImage);
       
       // Set the most recently uploaded image as the current image
       setImageUrl(imageUrl);
+      
+      // Verify that URL is still valid
+      console.log('Upload completed. Current URLs in store:', 
+        uploadedImages.length, 
+        'images, newest URL:', imageUrl.substring(0, 30) + '...'
+      );
+      
+      try {
+        // Test if we can access the URL - using Image instead of fetch for blob URLs
+        // since fetch with HEAD method isn't supported for blob URLs
+        const testImg = new Image();
+        testImg.onload = () => console.log('Blob URL is accessible and valid');
+        testImg.onerror = (err) => console.error('Blob URL might be invalid:', err);
+        testImg.src = imageUrl;
+      } catch (e) {
+        console.error('Error testing blob URL:', e);
+      }
       
       return imageUrl;
     } catch (err) {
@@ -185,11 +278,23 @@ export const useImageUpload = () => {
   };
 
   const resetUpload = () => {
-    // Revoke all object URLs to prevent memory leaks
+    // Only revoke object URLs when explicitly resetting the upload
+    // and make extra sure we're not revoking URLs that might still be in use
     if (uploadedImages && uploadedImages.length > 0) {
+      // Create a map of URLs to avoid revoking the same URL multiple times
+      // (which could happen if the same blob URL is referenced by multiple images)
+      const urlMap = new Map<string, boolean>();
+      
       uploadedImages.forEach(img => {
-        if (img.url) {
-          URL.revokeObjectURL(img.url);
+        if (img.url && !urlMap.has(img.url)) {
+          console.log('Revoking URL on reset:', img.url.substring(0, 30) + '...');
+          try {
+            // We're keeping this for cleanup, but only when explicitly called
+            URL.revokeObjectURL(img.url);
+            urlMap.set(img.url, true);
+          } catch (err) {
+            console.error('Error revoking URL:', err);
+          }
         }
       });
     }
@@ -205,6 +310,7 @@ export const useImageUpload = () => {
   return {
     uploadImage,
     resetUpload,
+    validateBlobUrls,
     isUploading,
     imageUrl,
     uploadedImages,

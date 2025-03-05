@@ -54,16 +54,16 @@ export default function CaptionOptions() {
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.3 }}
         >
-          <div className="flex items-start justify-between">
-            <div className="flex items-start">
-              <div className="p-2.5 bg-blue-50 dark:bg-blue-900/30 rounded-lg text-blue-500 dark:text-blue-400 mr-3 mt-0.5">
+          <div className="flex items-start justify-between w-full">
+            <div className="flex items-start flex-grow pr-4">
+              <div className="p-2.5 bg-blue-50 dark:bg-blue-900/30 rounded-lg text-blue-500 dark:text-blue-400 mr-3 mt-0.5 flex-shrink-0">
                 <FiHash className="w-5 h-5" />
               </div>
               <div>
                 <span className="text-sm font-medium text-gray-900 dark:text-white">
                   Include Hashtags
                 </span>
-                <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-gray-500 dark:text-gray-400 mt-1 max-w-xs`}>
+                <p className={`${isMobile ? 'text-xs max-w-xs' : 'text-sm w-full'} text-gray-500 dark:text-gray-400 mt-1`}>
                   {isMobile 
                     ? "Add hashtags to boost your post's discoverability."
                     : "Add relevant hashtags to increase reach and discoverability on Instagram. Hashtags help your content get found by users interested in similar topics."
@@ -71,9 +71,9 @@ export default function CaptionOptions() {
                 </p>
                 
                 {!isMobile && (
-                  <div className="mt-3 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg flex items-start">
+                  <div className="mt-3 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg flex items-start w-full">
                     <FiInfo className="w-4 h-4 text-blue-500 dark:text-blue-400 mt-0.5 mr-2 flex-shrink-0" />
-                    <p className="text-xs text-blue-700 dark:text-blue-300">
+                    <p className="text-xs text-blue-700 dark:text-blue-300 w-full">
                       Example: "Sunset vibes at the beach 🌅 #BeachLife #SunsetLover #NaturePhotography"
                     </p>
                   </div>
@@ -113,16 +113,16 @@ export default function CaptionOptions() {
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.3, delay: 0.1 }}
         >
-          <div className="flex items-start justify-between">
-            <div className="flex items-start">
-              <div className="p-2.5 bg-yellow-50 dark:bg-yellow-900/30 rounded-lg text-yellow-500 dark:text-yellow-400 mr-3 mt-0.5">
+          <div className="flex items-start justify-between w-full">
+            <div className="flex items-start flex-grow pr-4">
+              <div className="p-2.5 bg-yellow-50 dark:bg-yellow-900/30 rounded-lg text-yellow-500 dark:text-yellow-400 mr-3 mt-0.5 flex-shrink-0">
                 <FiSmile className="w-5 h-5" />
               </div>
               <div>
                 <span className="text-sm font-medium text-gray-900 dark:text-white">
                   Include Emojis
                 </span>
-                <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-gray-500 dark:text-gray-400 mt-1 max-w-xs`}>
+                <p className={`${isMobile ? 'text-xs max-w-xs' : 'text-sm w-full'} text-gray-500 dark:text-gray-400 mt-1`}>
                   {isMobile 
                     ? "Add emojis to make your captions more expressive."
                     : "Add relevant emojis to make captions more engaging, expressive, and visually appealing. Emojis can help convey emotions that words alone cannot."
@@ -130,9 +130,9 @@ export default function CaptionOptions() {
                 </p>
                 
                 {!isMobile && (
-                  <div className="mt-3 bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg flex items-start">
+                  <div className="mt-3 bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg flex items-start w-full">
                     <FiInfo className="w-4 h-4 text-yellow-500 dark:text-yellow-400 mt-0.5 mr-2 flex-shrink-0" />
-                    <p className="text-xs text-yellow-700 dark:text-yellow-300">
+                    <p className="text-xs text-yellow-700 dark:text-yellow-300 w-full">
                       Example: "Coffee date with my bestie ☕❤️ Nothing beats good conversations!"
                     </p>
                   </div>

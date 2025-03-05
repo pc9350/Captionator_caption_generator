@@ -1,47 +1,235 @@
-import { useRef, useState, useCallback, useEffect } from 'react';
-import { useDropzone } from 'react-dropzone';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Canvas } from '@react-three/fiber';
-import { useGLTF, PresentationControls, Environment, Float, Text } from '@react-three/drei';
-import { 
-  FiUpload, FiImage, FiX, FiAlertCircle, FiPlus, FiCamera, 
-  FiChevronLeft, FiChevronRight, FiMaximize2, FiGrid, FiLayers
-} from 'react-icons/fi';
-import Lottie from 'lottie-react';
-import { useImageUpload } from '../hooks/useImageUpload';
-import { useCaptionStore } from '../store/captionStore';
+import { useRef, useState, useCallback, useEffect } from "react";
+import { useDropzone } from "react-dropzone";
+import { motion, AnimatePresence } from "framer-motion";
+import { Canvas } from "@react-three/fiber";
+import {
+  useGLTF,
+  PresentationControls,
+  Environment,
+  Float,
+  Text,
+} from "@react-three/drei";
+import {
+  FiUpload,
+  FiImage,
+  FiX,
+  FiAlertCircle,
+  FiPlus,
+  FiCamera,
+  FiChevronLeft,
+  FiChevronRight,
+  FiMaximize2,
+  FiGrid,
+  FiLayers,
+  FiTrash2,
+} from "react-icons/fi";
+import Lottie from "lottie-react";
+import { useImageUpload } from "../hooks/useImageUpload";
+import { useCaptionStore } from "../store/captionStore";
 
 // Import Lottie animation data
-import uploadAnimation from '../animations/upload-animation.json';
+import uploadAnimation from "../animations/upload-animation.json";
 
 // 3D Model component
 function Model(props: any) {
-  const { scene } = useGLTF('/models/photo_frame.glb');
+  const { scene } = useGLTF("/models/photo_frame.glb");
   return <primitive object={scene} {...props} />;
 }
 
 export default function ImageUploader() {
-  const { uploadImage, resetUpload, error } = useImageUpload();
-  const { selectedImage, imageUrl, isUploading, uploadProgress, uploadedImages } = useCaptionStore();
+  const { uploadImage, resetUpload, error, validateBlobUrls } =
+    useImageUpload();
+  const {
+    selectedImage,
+    imageUrl,
+    isUploading,
+    uploadProgress,
+    uploadedImages,
+    clearUploadedImages,
+    addUploadedImage,
+    setImageUrl,
+  } = useCaptionStore();
   const [isDragging, setIsDragging] = useState(false);
-  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [activeImageIndex, setLocalActiveImageIndex] = useState(0);
   const [isGridView, setIsGridView] = useState(false);
   const [showFullscreen, setShowFullscreen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [imageValidityMap, setImageValidityMap] = useState<
+    Record<number, boolean>
+  >({});
+  const [isValidatingUrls, setIsValidatingUrls] = useState(false);
+  const [isConvertingToDataUrl, setIsConvertingToDataUrl] = useState(false);
 
   // Update active image index when uploaded images change
   useEffect(() => {
-    if (uploadedImages.length > 0 && activeImageIndex >= uploadedImages.length) {
-      setActiveImageIndex(uploadedImages.length - 1);
+    if (
+      uploadedImages.length > 0 &&
+      activeImageIndex >= uploadedImages.length
+    ) {
+      setLocalActiveImageIndex(uploadedImages.length - 1);
     }
   }, [uploadedImages, activeImageIndex]);
+
+  // Validate image URLs whenever uploadedImages change
+  useEffect(() => {
+    const checkImageValidity = async () => {
+      console.log("Checking validity of", uploadedImages.length, "images");
+
+      const validityMap: Record<number, boolean> = {};
+
+      for (let i = 0; i < uploadedImages.length; i++) {
+        const img = uploadedImages[i];
+        try {
+          // Create a new Image to test if URL loads correctly
+          const testImg = new Image();
+          const isValid = await new Promise<boolean>((resolve) => {
+            testImg.onload = () => {
+              console.log(
+                `Image ${i} is valid:`,
+                img.url.substring(0, 30) + "..."
+              );
+              resolve(true);
+            };
+            testImg.onerror = () => {
+              console.error(
+                `Image ${i} is invalid:`,
+                img.url.substring(0, 30) + "..."
+              );
+              resolve(false);
+            };
+            testImg.src = img.url;
+          });
+
+          validityMap[i] = isValid;
+        } catch (err) {
+          console.error(`Error validating image ${i}:`, err);
+          validityMap[i] = false;
+        }
+      }
+
+      setImageValidityMap(validityMap);
+      console.log("Image validity map:", validityMap);
+
+      // If we find any invalid images, try to validate/fix blob URLs
+      const hasInvalidImages = Object.values(validityMap).some(
+        (valid) => !valid
+      );
+      if (hasInvalidImages && !isValidatingUrls) {
+        console.log("Found invalid images, attempting to fix blob URLs");
+        handleValidateBlobUrls();
+      }
+    };
+
+    if (uploadedImages.length > 0) {
+      checkImageValidity();
+    }
+  }, [uploadedImages]);
+
+  // Function to handle validation and fixing of blob URLs
+  const handleValidateBlobUrls = () => {
+    if (isValidatingUrls) return;
+
+    setIsValidatingUrls(true);
+    try {
+      validateBlobUrls();
+      console.log("Blob URL validation complete");
+      // Force recheck of image validity
+      setTimeout(() => {
+        const newValidityMap: Record<number, boolean> = {};
+        uploadedImages.forEach((_, index) => {
+          newValidityMap[index] = true; // Optimistically set to true
+        });
+        setImageValidityMap(newValidityMap);
+      }, 500);
+    } catch (err) {
+      console.error("Error validating blob URLs:", err);
+    } finally {
+      setIsValidatingUrls(false);
+    }
+  };
+
+  // Utility function to convert a blob URL to a data URL
+  const blobToDataUrl = async (blobUrl: string): Promise<string> => {
+    try {
+      // Fetch the blob
+      const response = await fetch(blobUrl);
+      const blob = await response.blob();
+
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error("Error converting blob to data URL:", error);
+      return "";
+    }
+  };
+
+  // Function to repair images by converting blob URLs to data URLs
+  const handleRepairImages = async () => {
+    if (isConvertingToDataUrl) return;
+    setIsConvertingToDataUrl(true);
+
+    try {
+      console.log("Repairing images by converting blob URLs to data URLs...");
+      let needsUpdate = false;
+      const updatedImages = [...uploadedImages];
+
+      for (let i = 0; i < updatedImages.length; i++) {
+        // Only convert if the image is invalid
+        if (
+          imageValidityMap[i] === false &&
+          updatedImages[i].url.startsWith("blob:")
+        ) {
+          console.log(`Converting image ${i} from blob URL to data URL...`);
+          const dataUrl = await blobToDataUrl(updatedImages[i].url);
+
+          if (dataUrl) {
+            console.log(`Successfully converted image ${i} to data URL`);
+            // Update the image URL to the data URL
+            updatedImages[i] = {
+              ...updatedImages[i],
+              url: dataUrl,
+            };
+            needsUpdate = true;
+          }
+        }
+      }
+
+      if (needsUpdate) {
+        console.log("Updating store with repaired images...");
+        // Update the store with the new images
+        clearUploadedImages();
+        updatedImages.forEach((img) => addUploadedImage(img));
+
+        // Update the current image URL if it was one of the repaired ones
+        if (activeImageIndex < updatedImages.length) {
+          setImageUrl(updatedImages[activeImageIndex].url);
+        }
+
+        // Reset the validity map to trigger rechecking
+        setImageValidityMap({});
+      }
+    } catch (error) {
+      console.error("Error repairing images:", error);
+    } finally {
+      setIsConvertingToDataUrl(false);
+    }
+  };
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
       if (acceptedFiles && acceptedFiles.length > 0) {
+        console.log(
+          "Dropzone onDrop called with",
+          acceptedFiles.length,
+          "files"
+        );
         // Process all uploaded files
         for (const file of acceptedFiles) {
-          if (file.type.startsWith('image/')) {
+          if (file.type.startsWith("image/")) {
             await uploadImage(file);
           }
         }
@@ -50,35 +238,54 @@ export default function ImageUploader() {
     [uploadImage]
   );
 
+  // Using noClick to prevent automatic opening of file dialog
+  // We'll handle it manually with our Select Images button
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
-      'image/*': ['.jpeg', '.jpg', '.png', '.gif', '.webp'],
+      "image/*": [".jpeg", ".jpg", ".png", ".gif", ".webp"],
     },
     multiple: true, // Allow multiple file selection
+    noClick: true, // Prevent opening file dialog on click
   });
 
   // Update dragging state for animation
   const handleDragEnter = useCallback(() => setIsDragging(true), []);
   const handleDragLeave = useCallback(() => setIsDragging(false), []);
 
-  // Handle manual file selection
+  // Handle manual file selection with debounce to prevent double opening
+  const [isSelectingFile, setIsSelectingFile] = useState(false);
+
   const handleSelectImage = () => {
+    // Prevent double click issues
+    if (isSelectingFile) return;
+
+    setIsSelectingFile(true);
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
+    // Reset after a short delay
+    setTimeout(() => setIsSelectingFile(false), 1000);
   };
 
   // Handle file input change separately to prevent reopening
-  const handleFileInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileInputChange = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    console.log("File input change event triggered");
+    e.preventDefault(); // Prevent default
     e.stopPropagation(); // Stop event propagation
+
     if (e.target.files && e.target.files.length > 0) {
+      console.log("Processing", e.target.files.length, "files from file input");
+
       // Upload all selected files
       for (let i = 0; i < e.target.files.length; i++) {
         await uploadImage(e.target.files[i]);
       }
+
       // Reset the input value to allow selecting the same file again
-      e.target.value = '';
+      e.target.value = "";
     }
   };
 
@@ -86,49 +293,54 @@ export default function ImageUploader() {
   const showNextImage = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (uploadedImages.length > 1) {
-      setActiveImageIndex((prev) => (prev + 1) % uploadedImages.length);
+      setLocalActiveImageIndex(
+        (prev: number) => (prev + 1) % uploadedImages.length
+      );
     }
   };
 
   const showPrevImage = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (uploadedImages.length > 1) {
-      setActiveImageIndex((prev) => (prev - 1 + uploadedImages.length) % uploadedImages.length);
+      setLocalActiveImageIndex(
+        (prev: number) =>
+          (prev - 1 + uploadedImages.length) % uploadedImages.length
+      );
     }
   };
 
-  // Delete specific image
+  // Delete an image
   const deleteImage = (index: number, e: React.MouseEvent) => {
     e.stopPropagation();
-    
-    if (uploadedImages.length > 0 && index >= 0 && index < uploadedImages.length) {
-      // Create a new array without the image at the specified index
+
+    if (uploadedImages.length > 0) {
+      // Create a new array without the deleted image
       const newImages = [...uploadedImages];
-      
-      // Revoke the object URL to prevent memory leaks
-      if (newImages[index].url) {
-        URL.revokeObjectURL(newImages[index].url);
-      }
-      
-      // Remove the image from the array
+
+      // Don't revoke the URL here to prevent issues with other images
+      // that might be using the same URL reference
+      // URL.revokeObjectURL(newImages[index].url);
+
       newImages.splice(index, 1);
-      
+
       // Update the store with the new array
-      useCaptionStore.setState({ uploadedImages: newImages });
-      
-      // If we deleted the active image, adjust the active index
-      if (index === activeImageIndex) {
-        // If it was the last image, go to the previous one
-        if (index === uploadedImages.length - 1 && index > 0) {
-          setActiveImageIndex(index - 1);
-        } else if (uploadedImages.length === 1) {
-          // If it was the only image, reset everything
-          resetUpload();
-        }
-        // Otherwise, keep the same index (which will now point to the next image)
-      } else if (index < activeImageIndex) {
-        // If we deleted an image before the active one, adjust the index
-        setActiveImageIndex(activeImageIndex - 1);
+      clearUploadedImages();
+      newImages.forEach((img) => addUploadedImage(img));
+
+      // If we deleted the last image, clear everything
+      if (newImages.length === 0) {
+        setImageUrl(null);
+        setLocalActiveImageIndex(0);
+      }
+      // If we deleted the active image, set active to the last image
+      else if (index === activeImageIndex) {
+        const newActiveIndex = Math.min(index, newImages.length - 1);
+        setLocalActiveImageIndex(newActiveIndex);
+        setImageUrl(newImages[newActiveIndex].url);
+      }
+      // If we deleted an image before the active one, adjust the index
+      else if (index < activeImageIndex) {
+        setLocalActiveImageIndex(activeImageIndex - 1);
       }
     }
   };
@@ -146,7 +358,29 @@ export default function ImageUploader() {
   };
 
   // Get the current active image URL
-  const activeImageUrl = uploadedImages.length > 0 ? uploadedImages[activeImageIndex]?.url : null;
+  const activeImageUrl =
+    uploadedImages.length > 0 ? uploadedImages[activeImageIndex]?.url : null;
+
+  // Debug log for images
+  useEffect(() => {
+    if (uploadedImages.length > 0) {
+      console.log("Uploaded images:", uploadedImages);
+      console.log("First image URL:", uploadedImages[0]?.url);
+      console.log(
+        "NOTE: Blob URLs cannot be accessed by clicking them directly. They only work in the img tags within the app."
+      );
+
+      // Verify the first image actually has content (better debug)
+      if (uploadedImages[0]?.file) {
+        console.log(
+          "First image file size:",
+          Math.round(uploadedImages[0].file.size / 1024),
+          "KB"
+        );
+        console.log("First image type:", uploadedImages[0].file.type);
+      }
+    }
+  }, [uploadedImages]);
 
   return (
     <div className="w-full max-w-3xl mx-auto">
@@ -160,20 +394,27 @@ export default function ImageUploader() {
           <FiCamera className="mr-2 text-blue-500" /> Upload Your Images
         </h2>
         <p className="text-sm text-gray-600 dark:text-gray-400">
-          High-quality images will generate better captions. You can upload multiple images.
+          High-quality images will generate better captions. You can upload
+          multiple images.
         </p>
       </motion.div>
-      
+
       <div
         {...getRootProps()}
         className={`relative w-full h-[400px] rounded-xl overflow-hidden transition-all duration-300 ${
-          isDragActive ? 'ring-4 ring-blue-500 scale-[1.02]' : 'ring-1 ring-gray-200 dark:ring-gray-700'
-        } ${isUploading || uploadedImages.length > 0 ? 'bg-gray-900' : 'bg-gradient-to-br from-gray-800 to-gray-900'}`}
+          isDragActive
+            ? "ring-4 ring-blue-500 scale-[1.02]"
+            : "ring-1 ring-gray-200 dark:ring-gray-700"
+        } ${
+          isUploading || uploadedImages.length > 0
+            ? "bg-gray-900"
+            : "bg-gradient-to-br from-gray-800 to-gray-900"
+        }`}
         onDragEnter={handleDragEnter}
         onDragLeave={handleDragLeave}
       >
         <input {...getInputProps()} />
-        <input 
+        <input
           type="file"
           ref={fileInputRef}
           className="hidden"
@@ -183,7 +424,7 @@ export default function ImageUploader() {
           aria-label="Upload images"
           title="Upload images"
         />
-        
+
         {/* Background */}
         <div className="absolute inset-0 z-0 bg-gradient-to-br from-gray-900 to-black">
           {uploadedImages.length === 0 && !isUploading && (
@@ -205,19 +446,24 @@ export default function ImageUploader() {
               >
                 <motion.div
                   className="w-24 h-24 mb-6 rounded-full bg-white/10 flex items-center justify-center"
-                  animate={{ 
+                  animate={{
                     scale: isDragActive ? 1.1 : 1,
-                    backgroundColor: isDragActive ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255, 255, 255, 0.1)'
+                    backgroundColor: isDragActive
+                      ? "rgba(59, 130, 246, 0.2)"
+                      : "rgba(255, 255, 255, 0.1)",
                   }}
                   whileHover={{ scale: 1.05 }}
                 >
                   <FiUpload className="w-10 h-10 text-white" />
                 </motion.div>
                 <h3 className="text-2xl font-bold mb-3">
-                  {isDragActive ? "Drop your images here" : "Drag & Drop your images"}
+                  {isDragActive
+                    ? "Drop your images here"
+                    : "Drag & Drop your images"}
                 </h3>
                 <p className="text-white/70 text-center max-w-md mb-6">
-                  Upload high-quality images to generate Instagram captions that match your content perfectly
+                  Upload high-quality images to generate Instagram captions that
+                  match your content perfectly
                 </p>
                 <motion.button
                   onClick={(e) => {
@@ -225,9 +471,10 @@ export default function ImageUploader() {
                     handleSelectImage();
                   }}
                   className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full font-medium text-white shadow-lg"
-                  whileHover={{ 
+                  whileHover={{
                     scale: 1.05,
-                    boxShadow: '0 10px 25px -5px rgba(59, 130, 246, 0.5), 0 8px 10px -6px rgba(59, 130, 246, 0.3)'
+                    boxShadow:
+                      "0 10px 25px -5px rgba(59, 130, 246, 0.5), 0 8px 10px -6px rgba(59, 130, 246, 0.3)",
                   }}
                   whileTap={{ scale: 0.95 }}
                 >
@@ -247,21 +494,23 @@ export default function ImageUploader() {
                 transition={{ duration: 0.5 }}
               >
                 <div className="w-64 h-64 mb-4">
-                  <Lottie 
-                    animationData={uploadAnimation} 
+                  <Lottie
+                    animationData={uploadAnimation}
                     loop={true}
-                    style={{ width: '100%', height: '100%' }}
+                    style={{ width: "100%", height: "100%" }}
                   />
                 </div>
                 <div className="w-full max-w-xs bg-white/10 rounded-full h-3 mb-3 overflow-hidden">
-                  <motion.div 
-                    className="bg-gradient-to-r from-blue-500 to-indigo-600 h-3 rounded-full" 
+                  <motion.div
+                    className="bg-gradient-to-r from-blue-500 to-indigo-600 h-3 rounded-full"
                     initial={{ width: 0 }}
                     animate={{ width: `${uploadProgress}%` }}
                     transition={{ duration: 0.3 }}
                   />
                 </div>
-                <p className="text-white/90 font-medium text-lg">Uploading... {Math.round(uploadProgress)}%</p>
+                <p className="text-white/90 font-medium text-lg">
+                  Uploading... {Math.round(uploadProgress)}%
+                </p>
               </motion.div>
             ) : (
               <motion.div
@@ -273,14 +522,16 @@ export default function ImageUploader() {
                 transition={{ duration: 0.5 }}
               >
                 {/* View mode selector */}
-                <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20 bg-black/50 backdrop-blur-sm rounded-full p-1 flex space-x-1">
+                <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-30 bg-black/50 backdrop-blur-sm rounded-full p-1 flex space-x-1">
                   <motion.button
                     onClick={(e) => {
                       e.stopPropagation();
                       setIsGridView(false);
                     }}
                     className={`p-2 rounded-full ${
-                      !isGridView ? 'bg-blue-500 text-white' : 'text-white/70 hover:text-white'
+                      !isGridView
+                        ? "bg-blue-500 text-white"
+                        : "text-white/70 hover:text-white"
                     }`}
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
@@ -294,7 +545,9 @@ export default function ImageUploader() {
                       setIsGridView(true);
                     }}
                     className={`p-2 rounded-full ${
-                      isGridView ? 'bg-blue-500 text-white' : 'text-white/70 hover:text-white'
+                      isGridView
+                        ? "bg-blue-500 text-white"
+                        : "text-white/70 hover:text-white"
                     }`}
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
@@ -302,157 +555,168 @@ export default function ImageUploader() {
                   >
                     <FiGrid size={16} />
                   </motion.button>
-                  <motion.button
-                    onClick={toggleFullscreen}
-                    className={`p-2 rounded-full text-white/70 hover:text-white`}
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    aria-label="View fullscreen"
-                    title="Fullscreen View"
-                  >
-                    <FiMaximize2 size={16} />
-                  </motion.button>
                 </div>
-                
+
                 {/* Grid View */}
                 {isGridView ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-6 w-full h-full overflow-y-auto">
-                    {uploadedImages.map((image, index) => (
-                      <motion.div
-                        key={index}
-                        className={`relative rounded-lg overflow-hidden cursor-pointer h-32 bg-gray-800 ${
-                          index === activeImageIndex ? 'ring-2 ring-blue-500' : ''
-                        }`}
-                        whileHover={{ scale: 1.05, zIndex: 10 }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setActiveImageIndex(index);
-                        }}
-                      >
-                        <img
-                          src={image.url}
-                          alt={`Uploaded ${index + 1}`}
-                          className="w-full h-full object-cover"
-                          style={{ objectFit: 'cover' }}
-                        />
-                        <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-30 transition-all duration-200 flex items-center justify-center">
-                          <motion.button
-                            initial={{ opacity: 0 }}
-                            whileHover={{ opacity: 1 }}
-                            className="p-1.5 bg-red-500 rounded-full text-white absolute top-1 right-1"
-                            onClick={(e) => deleteImage(index, e)}
-                          >
-                            <FiX size={14} />
-                          </motion.button>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-6 w-full h-full overflow-y-auto z-10 bg-gray-900/50">
+                    {uploadedImages.map((image, index) => {
+                      return (
+                        <div
+                          key={`grid-item-${index}`}
+                          className={`relative rounded-lg overflow-hidden cursor-pointer h-32 ${
+                            index === activeImageIndex
+                              ? "ring-2 ring-blue-500"
+                              : "border border-gray-600"
+                          }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setLocalActiveImageIndex(index);
+                            setIsGridView(false);
+                          }}
+                        >
+                          <div className="absolute inset-0 flex items-center justify-center bg-gray-800/30">
+                            <img
+                              src={image.url}
+                              alt={`Uploaded ${index + 1}`}
+                              className="max-w-full max-h-full object-contain"
+                              style={{
+                                backgroundColor: "#2d3748",
+                                filter: "drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1))",
+                                padding: "2px",
+                              }}
+                              onError={(e) => {
+                                console.error('Image failed to load:', e);
+                                e.currentTarget.src = '/fallback.svg';
+                              }}
+                            />
+                          </div>
                         </div>
-                      </motion.div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   // Carousel View
-                  <div className="w-full h-full relative">
-                    <div className="w-full h-full flex items-center justify-center">
-                      <AnimatePresence mode="wait">
-                        <motion.div
-                          key={activeImageIndex}
-                          initial={{ opacity: 0, scale: 0.8 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.8 }}
-                          transition={{ duration: 0.3 }}
-                          className="w-full h-full flex items-center justify-center p-4"
-                        >
-                          <img
-                            src={activeImageUrl || ''}
-                            alt={`Uploaded ${activeImageIndex + 1} of ${uploadedImages.length}`}
-                            className="max-w-full max-h-full object-contain rounded-lg shadow-lg"
-                            style={{ 
-                              filter: 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1))',
-                            }}
-                          />
-                        </motion.div>
-                      </AnimatePresence>
-                    </div>
-
-                    {/* Image navigation controls */}
+                  <div className="relative w-full h-full flex items-center justify-center">
+                    {/* Navigation buttons */}
                     {uploadedImages.length > 1 && (
                       <>
                         <motion.button
                           onClick={showPrevImage}
-                          className="absolute left-4 top-1/2 transform -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70 transition-colors"
-                          whileHover={{ scale: 1.1, backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
+                          className="absolute left-4 z-20 p-2 bg-black/50 text-white rounded-full backdrop-blur-sm"
+                          whileHover={{ scale: 1.1 }}
                           whileTap={{ scale: 0.9 }}
                         >
-                          <FiChevronLeft className="w-5 h-5" />
+                          <FiChevronLeft size={20} />
                         </motion.button>
-                        
                         <motion.button
                           onClick={showNextImage}
-                          className="absolute right-4 top-1/2 transform -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70 transition-colors"
-                          whileHover={{ scale: 1.1, backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
+                          className="absolute right-4 z-20 p-2 bg-black/50 text-white rounded-full backdrop-blur-sm"
+                          whileHover={{ scale: 1.1 }}
                           whileTap={{ scale: 0.9 }}
                         >
-                          <FiChevronRight className="w-5 h-5" />
+                          <FiChevronRight size={20} />
                         </motion.button>
                       </>
                     )}
-                    
-                    {/* Pagination dots */}
-                    {uploadedImages.length > 1 && (
-                      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex justify-center items-center space-x-2">
-                        {uploadedImages.map((_, index) => (
-                          <motion.button
-                            key={index}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveImageIndex(index);
-                            }}
-                            className={`w-2.5 h-2.5 rounded-full ${
-                              index === activeImageIndex ? 'bg-white' : 'bg-white/40'
-                            }`}
-                            whileHover={{ scale: 1.2 }}
-                            whileTap={{ scale: 0.8 }}
-                            aria-label={`View image ${index + 1}`}
-                          />
-                        ))}
+
+                    {/* Active image */}
+                    <div className="relative w-full h-full flex items-center justify-center">
+                      {uploadedImages[activeImageIndex] && (
+                        <img
+                          src={uploadedImages[activeImageIndex].url}
+                          alt={`Uploaded ${activeImageIndex + 1}`}
+                          className="max-w-full max-h-full object-contain"
+                          onError={(e) => {
+                            console.error('Image failed to load:', e);
+                            e.currentTarget.src = '/fallback.svg';
+                          }}
+                        />
+                      )}
+
+                      {/* Image controls - positioned at the top right */}
+                      <div className="absolute top-4 right-4 flex items-center space-x-2 z-20">
+                        <motion.button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteImage(activeImageIndex, e);
+                          }}
+                          className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                        >
+                          <FiTrash2 size={16} />
+                        </motion.button>
+                        <motion.button
+                          onClick={toggleFullscreen}
+                          className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors"
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                        >
+                          <FiMaximize2 size={16} />
+                        </motion.button>
                       </div>
-                    )}
+
+                      {/* Pagination dots */}
+                      {uploadedImages.length > 1 && (
+                        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-1 z-20">
+                          {uploadedImages.map((_, index) => (
+                            <motion.button
+                              key={index}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setLocalActiveImageIndex(index);
+                              }}
+                              className={`w-2 h-2 rounded-full ${
+                                index === activeImageIndex
+                                  ? "bg-white"
+                                  : "bg-white/40 hover:bg-white/60"
+                              }`}
+                              whileHover={{ scale: 1.2 }}
+                              whileTap={{ scale: 0.8 }}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
-                
+
                 {/* Image count indicator */}
                 <div className="absolute top-4 left-4 bg-black/50 backdrop-blur-sm text-white px-3 py-1.5 rounded-full text-sm font-medium">
                   {activeImageIndex + 1} / {uploadedImages.length}
                 </div>
-                
+
                 {/* Action buttons */}
                 <div className="absolute bottom-4 right-4 flex space-x-2">
                   {/* Add more images button */}
-                  <motion.button 
+                  <motion.button
                     onClick={(e) => {
                       e.stopPropagation();
                       handleSelectImage();
                     }}
                     className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-lg"
-                    whileHover={{ 
+                    whileHover={{
                       scale: 1.1,
-                      boxShadow: '0 10px 25px -5px rgba(59, 130, 246, 0.5), 0 8px 10px -6px rgba(59, 130, 246, 0.3)'
+                      boxShadow:
+                        "0 10px 25px -5px rgba(59, 130, 246, 0.5), 0 8px 10px -6px rgba(59, 130, 246, 0.3)",
                     }}
                     whileTap={{ scale: 0.9 }}
                     aria-label="Add more images"
                   >
                     <FiPlus className="w-5 h-5" />
                   </motion.button>
-                  
+
                   {/* Remove all images button */}
-                  <motion.button 
+                  <motion.button
                     onClick={(e) => {
                       e.stopPropagation();
                       resetUpload();
                     }}
                     className="w-10 h-10 rounded-full bg-red-500/80 flex items-center justify-center text-white shadow-lg"
-                    whileHover={{ 
+                    whileHover={{
                       scale: 1.1,
-                      backgroundColor: 'rgba(239, 68, 68, 0.9)'
+                      backgroundColor: "rgba(239, 68, 68, 0.9)",
                     }}
                     whileTap={{ scale: 0.9 }}
                     aria-label="Remove all images"
@@ -468,7 +732,7 @@ export default function ImageUploader() {
 
       {/* Fullscreen preview modal */}
       {showFullscreen && activeImageUrl && (
-        <div 
+        <div
           className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
           onClick={() => setShowFullscreen(false)}
         >
@@ -484,7 +748,7 @@ export default function ImageUploader() {
           >
             <FiX className="w-6 h-6" />
           </button>
-          
+
           {/* Fullscreen navigation controls */}
           {uploadedImages.length > 1 && (
             <>
@@ -498,7 +762,7 @@ export default function ImageUploader() {
               >
                 <FiChevronLeft className="w-6 h-6" />
               </button>
-              
+
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -533,4 +797,4 @@ export default function ImageUploader() {
       </AnimatePresence>
     </div>
   );
-} 
+}
