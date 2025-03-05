@@ -1,5 +1,15 @@
 import Link from 'next/link';
 import { FiCamera, FiHash, FiSmile, FiSliders, FiShare2 } from 'react-icons/fi';
+import AnimatedCaptionShowcase from './components/AnimatedCaptionShowcase';
+
+// Sample captions for the animation
+const sampleCaptions = [
+  "Living my best life one adventure at a time ✨",
+  "Chasing sunsets and good vibes only 🌅",
+  "Coffee in one hand, confidence in the other ☕",
+  "Making memories that will last a lifetime 📸",
+  "Finding beauty in the everyday moments 🌿"
+];
 
 export default function Home() {
   return (
@@ -43,8 +53,17 @@ export default function Home() {
                   <div className="w-64 h-64 bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 transform rotate-3 transition-transform hover:rotate-0 duration-300">
                     <div className="w-full h-40 bg-gray-200 dark:bg-gray-700 rounded-lg mb-4"></div>
                     <div className="space-y-2">
-                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-full w-3/4"></div>
-                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-full w-1/2"></div>
+                      <AnimatedCaptionShowcase captions={sampleCaptions} />
+                    </div>
+                  </div>
+                  <div className="w-64 h-64 bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 transform -rotate-3 transition-transform hover:rotate-0 duration-300 absolute -bottom-20 -right-10">
+                    <div className="w-full h-40 bg-gray-200 dark:bg-gray-700 rounded-lg mb-4"></div>
+                    <div className="space-y-2">
+                      <AnimatedCaptionShowcase 
+                        captions={sampleCaptions.slice().reverse()} 
+                        typingSpeed={70}
+                        pauseDuration={1800}
+                      />
                     </div>
                   </div>
                 </div>

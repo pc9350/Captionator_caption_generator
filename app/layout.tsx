@@ -5,6 +5,7 @@ import { ClerkProvider } from '@clerk/nextjs';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import FirebaseDiagnosticsProvider from './components/FirebaseDiagnosticsProvider';
+import { Toaster } from "react-hot-toast";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -29,6 +30,26 @@ export default function RootLayout({
             </main>
             <Footer />
             <FirebaseDiagnosticsProvider />
+            <Toaster 
+              position="bottom-right"
+              toastOptions={{
+                duration: 5000,
+                style: {
+                  background: '#333',
+                  color: '#fff',
+                },
+                success: {
+                  style: {
+                    background: '#22c55e',
+                  },
+                },
+                error: {
+                  style: {
+                    background: '#ef4444',
+                  },
+                },
+              }}
+            />
           </div>
         </body>
       </html>
