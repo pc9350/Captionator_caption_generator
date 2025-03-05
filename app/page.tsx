@@ -1,7 +1,10 @@
+'use client'
+
 import Link from 'next/link';
-import { FiCamera, FiHash, FiSmile, FiSliders, FiShare2, FiChevronDown } from 'react-icons/fi';
+import { FiCamera, FiHash, FiSmile, FiSliders, FiShare2, FiChevronDown, FiHeart, FiMessageSquare, FiShare } from 'react-icons/fi';
 import AnimatedCaptionShowcase from './components/AnimatedCaptionShowcase';
 import Image from 'next/image';
+import { useState, useEffect } from 'react';
 
 // Sample captions for the animation
 const sampleCaptions = [
@@ -12,16 +15,71 @@ const sampleCaptions = [
   "Finding beauty in the everyday moments 🌿"
 ];
 
-// Second set of captions
+// Second set of captions - shorter for the smaller polaroid
 const secondaryCaptions = [
-  "Adventure awaits, just around the corner 🗺️",
-  "Collecting moments, not things 💫",
-  "Life is better with friends who wag their tails 🐾",
-  "Happiness is a warm puppy 🐶",
-  "Weekend vibes with my best friend 🌈"
+  "Puppy love 🐾",
+  "Weekend vibes 🌈",
+  "Best friends 🐶",
+  "Happy days ✨"
 ];
 
 export default function Home() {
+  const [mainLiked, setMainLiked] = useState(false);
+  const [smallLiked, setSmallLiked] = useState(false);
+  const [mainLikes, setMainLikes] = useState(124);
+  const [smallLikes, setSmallLikes] = useState(89);
+  const [mainStraight, setMainStraight] = useState(false);
+  const [smallStraight, setSmallStraight] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Check if device is mobile
+  useEffect(() => {
+    const checkIfMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    // Initial check
+    checkIfMobile();
+    
+    // Add event listener for window resize
+    window.addEventListener('resize', checkIfMobile);
+    
+    // Cleanup
+    return () => window.removeEventListener('resize', checkIfMobile);
+  }, []);
+
+  const handleMainLike = () => {
+    if (mainLiked) {
+      setMainLikes(mainLikes - 1);
+    } else {
+      setMainLikes(mainLikes + 1);
+    }
+    setMainLiked(!mainLiked);
+  };
+
+  const handleSmallLike = () => {
+    if (smallLiked) {
+      setSmallLikes(smallLikes - 1);
+    } else {
+      setSmallLikes(smallLikes + 1);
+    }
+    setSmallLiked(!smallLiked);
+  };
+
+  const toggleMainStraight = () => {
+    // Only toggle if on mobile
+    if (isMobile) {
+      setMainStraight(!mainStraight);
+    }
+  };
+
+  const toggleSmallStraight = () => {
+    // Only toggle if on mobile
+    if (isMobile) {
+      setSmallStraight(!smallStraight);
+    }
+  };
+
   return (
     <div className="bg-white dark:bg-gray-900">
       {/* Hero Section - Full height */}
@@ -57,12 +115,17 @@ export default function Home() {
               </div>
             </div>
             <div className="relative">
-              <div className="w-full h-[500px] bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/20 dark:to-purple-900/20 rounded-2xl shadow-2xl overflow-hidden">
+              <div className="w-full h-[350px] sm:h-[400px] md:h-[500px] bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/20 dark:to-purple-900/20 rounded-2xl shadow-2xl overflow-hidden">
                 <div className="absolute inset-0 bg-grid-slate-900/[0.02] dark:bg-grid-slate-100/[0.03]"></div>
                 <div className="absolute inset-0 flex items-center justify-center">
                   {/* Main polaroid with caption */}
-                  <div className="w-72 h-96 bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 transform rotate-3 transition-transform hover:rotate-0 duration-300">
-                    <div className="w-full h-64 bg-gray-200 dark:bg-gray-700 rounded-lg mb-4 overflow-hidden">
+                  <div 
+                    className={`w-48 sm:w-56 md:w-72 h-[300px] sm:h-[340px] md:h-[420px] bg-white dark:bg-gray-800 rounded-xl shadow-lg p-2 sm:p-3 md:p-4 cursor-pointer transition-all duration-300 ${
+                      mainStraight ? 'rotate-0' : 'rotate-3 md:hover:rotate-0'
+                    }`}
+                    onClick={toggleMainStraight}
+                  >
+                    <div className="w-full h-40 sm:h-48 md:h-64 bg-gray-200 dark:bg-gray-700 rounded-lg mb-1 sm:mb-2 md:mb-3 overflow-hidden">
                       {/* Using the hot-air-balloons.jpg image */}
                       <Image 
                         src="/images/hot-air-balloons.jpg" 
@@ -70,18 +133,60 @@ export default function Home() {
                         width={500} 
                         height={500} 
                         className="w-full h-full object-cover"
+                        priority
                       />
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-1 mb-1 sm:mb-2 md:mb-3 text-xs sm:text-sm">
                       <AnimatedCaptionShowcase captions={sampleCaptions} />
+                    </div>
+                    
+                    {/* Social media interaction buttons */}
+                    <div className="border-t border-gray-200 dark:border-gray-700 pt-1 sm:pt-2 md:pt-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2 sm:space-x-3 md:space-x-4">
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMainLike();
+                            }}
+                            className="flex items-center space-x-1 group"
+                            aria-label={mainLiked ? "Unlike post" : "Like post"}
+                          >
+                            <FiHeart 
+                              className={`w-3 sm:w-4 md:w-5 h-3 sm:h-4 md:h-5 ${mainLiked ? 'fill-red-500 text-red-500' : 'text-gray-600 dark:text-gray-400 group-hover:text-red-500 dark:group-hover:text-red-400'} transition-colors`} 
+                            />
+                            <span className="text-xs text-gray-600 dark:text-gray-400">{mainLikes}</span>
+                          </button>
+                          <button 
+                            className="flex items-center space-x-1" 
+                            aria-label="View comments"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <FiMessageSquare className="w-3 sm:w-4 md:w-5 h-3 sm:h-4 md:h-5 text-gray-600 dark:text-gray-400" />
+                            <span className="text-xs text-gray-600 dark:text-gray-400">24</span>
+                          </button>
+                        </div>
+                        <button 
+                          className="flex items-center" 
+                          aria-label="Share post"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <FiShare className="w-3 sm:w-4 md:w-5 h-3 sm:h-4 md:h-5 text-gray-600 dark:text-gray-400" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
               
-              {/* Small polaroid on the side with caption */}
-              <div className="absolute -bottom-6 -right-6 w-56 h-72 bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 transform -rotate-6 transition-transform hover:rotate-0 duration-300">
-                <div className="w-full h-40 bg-gray-200 dark:bg-gray-700 rounded-lg mb-4 overflow-hidden">
+              {/* Small polaroid on the side with caption - positioned to avoid overlap */}
+              <div 
+                className={`absolute -bottom-6 -right-6 w-32 sm:w-36 md:w-48 h-[220px] sm:h-[260px] md:h-[320px] bg-white dark:bg-gray-800 rounded-xl shadow-lg p-2 sm:p-3 md:p-4 cursor-pointer transition-all duration-300 ${
+                  smallStraight ? 'rotate-0' : '-rotate-6 md:hover:rotate-0'
+                }`}
+                onClick={toggleSmallStraight}
+              >
+                <div className="w-full h-20 sm:h-24 md:h-32 bg-gray-200 dark:bg-gray-700 rounded-lg mb-1 sm:mb-2 md:mb-3 overflow-hidden">
                   {/* Using the dogs.jpg image */}
                   <Image 
                     src="/images/dogs.jpg" 
@@ -89,14 +194,51 @@ export default function Home() {
                     width={500} 
                     height={500} 
                     className="w-full h-full object-cover"
+                    priority
                   />
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1 mb-1 sm:mb-2 md:mb-3 text-[10px] sm:text-xs md:text-sm">
                   <AnimatedCaptionShowcase 
                     captions={secondaryCaptions} 
                     typingSpeed={70}
                     pauseDuration={1800}
                   />
+                </div>
+                
+                {/* Social media interaction buttons */}
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-1 sm:pt-2 md:pt-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2 sm:space-x-3 md:space-x-4">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSmallLike();
+                        }}
+                        className="flex items-center space-x-1 group"
+                        aria-label={smallLiked ? "Unlike post" : "Like post"}
+                      >
+                        <FiHeart 
+                          className={`w-3 sm:w-4 md:w-5 h-3 sm:h-4 md:h-5 ${smallLiked ? 'fill-red-500 text-red-500' : 'text-gray-600 dark:text-gray-400 group-hover:text-red-500 dark:group-hover:text-red-400'} transition-colors`} 
+                        />
+                        <span className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400">{smallLikes}</span>
+                      </button>
+                      <button 
+                        className="flex items-center space-x-1" 
+                        aria-label="View comments"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <FiMessageSquare className="w-3 sm:w-4 md:w-5 h-3 sm:h-4 md:h-5 text-gray-600 dark:text-gray-400" />
+                        <span className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400">18</span>
+                      </button>
+                    </div>
+                    <button 
+                      className="flex items-center" 
+                      aria-label="Share post"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <FiShare className="w-3 sm:w-4 md:w-5 h-3 sm:h-4 md:h-5 text-gray-600 dark:text-gray-400" />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
