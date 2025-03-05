@@ -7,9 +7,7 @@ export default function GenerateButton({ tone = 'Casual' }: { tone?: string }) {
   const { generateCaptions, error } = useCaptionGeneration();
   const { 
     isGenerating, 
-    uploadedImages, 
-    includeHashtags,
-    includeEmojis
+    uploadedImages
   } = useCaptionStore();
 
   const handleGenerate = async () => {

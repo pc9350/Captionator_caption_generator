@@ -1,7 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { useState, useEffect, useRef } from 'react';
 
 interface AnimatedCaptionShowcaseProps {
   captions: string[];
@@ -18,56 +17,71 @@ export default function AnimatedCaptionShowcase({
 }: AnimatedCaptionShowcaseProps) {
   const [displayedText, setDisplayedText] = useState('');
   const [currentCaptionIndex, setCurrentCaptionIndex] = useState(0);
-  const [isTyping, setIsTyping] = useState(true);
-  const [isPaused, setIsPaused] = useState(false);
-
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isWaiting, setIsWaiting] = useState(false);
+  
+  // Use refs to track the current state in the interval callback
+  const currentIndexRef = useRef(currentCaptionIndex);
+  const isDeletingRef = useRef(isDeleting);
+  const isWaitingRef = useRef(isWaiting);
+  const displayedTextRef = useRef(displayedText);
+  
+  // Update refs when state changes
   useEffect(() => {
-    if (!captions.length) return;
-
-    let timeout: NodeJS.Timeout;
-    const currentCaption = captions[currentCaptionIndex];
-
-    if (isTyping && !isPaused) {
-      if (displayedText.length < currentCaption.length) {
-        // Typing animation
-        timeout = setTimeout(() => {
-          setDisplayedText(currentCaption.slice(0, displayedText.length + 1));
-        }, typingSpeed);
+    currentIndexRef.current = currentCaptionIndex;
+    isDeletingRef.current = isDeleting;
+    isWaitingRef.current = isWaiting;
+    displayedTextRef.current = displayedText;
+  }, [currentCaptionIndex, isDeleting, isWaiting, displayedText]);
+  
+  useEffect(() => {
+    const animateText = () => {
+      const currentCaption = captions[currentIndexRef.current];
+      
+      // If waiting, do nothing until wait time is over
+      if (isWaitingRef.current) {
+        return;
+      }
+      
+      // If deleting
+      if (isDeletingRef.current) {
+        if (displayedTextRef.current.length > 0) {
+          // Delete one character
+          setDisplayedText(displayedTextRef.current.slice(0, -1));
+        } else {
+          // Move to next caption when done deleting
+          setIsDeleting(false);
+          setCurrentCaptionIndex((currentIndexRef.current + 1) % captions.length);
+        }
+        return;
+      }
+      
+      // If typing
+      if (displayedTextRef.current.length < currentCaption.length) {
+        // Add one character
+        setDisplayedText(currentCaption.slice(0, displayedTextRef.current.length + 1));
       } else {
-        // Finished typing, pause before deleting
-        setIsPaused(true);
-        timeout = setTimeout(() => {
-          setIsPaused(false);
-          setIsTyping(false);
+        // Start waiting before deleting
+        setIsWaiting(true);
+        setTimeout(() => {
+          setIsWaiting(false);
+          setIsDeleting(true);
         }, pauseDuration);
       }
-    } else if (!isTyping && !isPaused) {
-      if (displayedText.length > 0) {
-        // Deleting animation
-        timeout = setTimeout(() => {
-          setDisplayedText(displayedText.slice(0, displayedText.length - 1));
-        }, deletingSpeed);
-      } else {
-        // Finished deleting, move to next caption
-        setIsTyping(true);
-        setCurrentCaptionIndex((prevIndex) => (prevIndex + 1) % captions.length);
-      }
-    }
-
-    return () => clearTimeout(timeout);
-  }, [captions, currentCaptionIndex, displayedText, isTyping, isPaused, typingSpeed, pauseDuration, deletingSpeed]);
-
+    };
+    
+    // Set up intervals for typing and deleting
+    const typingInterval = setInterval(animateText, isDeletingRef.current ? deletingSpeed : typingSpeed);
+    
+    return () => clearInterval(typingInterval);
+  }, [captions, typingSpeed, pauseDuration, deletingSpeed]);
+  
   return (
-    <div className="min-h-[80px] flex items-center justify-center">
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5 }}
-        className="text-lg text-gray-800 dark:text-gray-200 font-medium"
-      >
-        {displayedText}
-        <span className="inline-block w-0.5 h-5 bg-blue-600 dark:bg-blue-400 ml-1 animate-blink"></span>
-      </motion.div>
+    <div className="inline-flex items-center">
+      <p className="text-gray-900 dark:text-white">
+        <span className="font-semibold">@caption_ai</span> {displayedText}
+      </p>
+      <span className="ml-1 h-4 w-2 bg-blue-500 animate-blink"></span>
     </div>
   );
 } 

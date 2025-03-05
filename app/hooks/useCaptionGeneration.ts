@@ -7,6 +7,11 @@ import { Caption } from '../types';
 import { useFirebaseIntegration } from './useFirebaseIntegration';
 import { useCaptionStore } from '../store/captionStore';
 
+interface ApiError {
+  message: string;
+  status?: number;
+}
+
 export const useCaptionGeneration = () => {
   const [error, setError] = useState<string | null>(null);
   const { isSignedIn, user } = useUser();
@@ -119,19 +124,11 @@ export const useCaptionGeneration = () => {
       }
 
       return newCaptions;
-    } catch (err: any) {
-      console.error('Error generating captions:', err);
-      
-      // Provide more user-friendly error messages
-      if (err.message.includes('too large')) {
-        setError('The images are too large. Please try with smaller images or fewer images.');
-      } else if (err.message.includes('Rate limit')) {
-        setError('Rate limit exceeded. Please wait a moment and try again.');
-      } else {
-        setError(err.message || 'Failed to generate captions. Please try again.');
-      }
-      
-      return [];
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
+      console.error('Error generating caption:', apiError);
+      setError(apiError.message || 'Failed to generate caption');
+      return null;
     } finally {
       setIsGenerating(false);
     }
@@ -199,9 +196,13 @@ export const useCaptionGeneration = () => {
       };
 
       return newCaption;
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error regenerating caption:', err);
-      setError(err.message || 'Failed to regenerate caption. Please try again.');
+      if (err instanceof Error) {
+        setError(err.message || 'Failed to regenerate caption. Please try again.');
+      } else {
+        setError('An unexpected error occurred while regenerating the caption.');
+      }
       return null;
     } finally {
       setIsGenerating(false);

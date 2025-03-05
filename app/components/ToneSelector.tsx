@@ -130,12 +130,10 @@ export default function ToneSelector({ selectedTone, onToneChange }: ToneSelecto
   // Initial scroll check when component mounts
   useEffect(() => {
     // Small delay to ensure the component is fully rendered
-    const timer = setTimeout(() => {
-      checkScrollPosition();
-    }, 100);
+    const timer = setTimeout(checkScrollPosition, 100);
     
     return () => clearTimeout(timer);
-  }, []);
+  }, [checkScrollPosition]);
 
   return (
     <div className="w-full">
@@ -183,11 +181,6 @@ export default function ToneSelector({ selectedTone, onToneChange }: ToneSelecto
           {toneOptions.map((tone) => (
             <motion.div
               key={tone.value}
-              className={`relative flex-shrink-0 w-[270px] mx-3 first:ml-5 last:mr-5 overflow-hidden rounded-xl cursor-pointer transition-all duration-300 ${
-                selectedTone === tone.value
-                  ? 'ring-2 ring-offset-2 ring-blue-500 dark:ring-blue-400'
-                  : 'hover:ring-1 hover:ring-gray-300 dark:hover:ring-gray-600'
-              }`}
               whileHover={{ 
                 scale: 1.02, 
                 boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
@@ -195,9 +188,15 @@ export default function ToneSelector({ selectedTone, onToneChange }: ToneSelecto
               }}
               whileTap={{ scale: 0.98 }}
               onClick={() => {
-                console.log('Clicked on tone:', tone.value);
                 handleToneChange(tone.value);
               }}
+              className={`relative flex-shrink-0 w-[270px] mx-3 first:ml-5 last:mr-5 overflow-hidden rounded-xl cursor-pointer transition-all duration-300 ${
+                selectedTone === tone.value
+                  ? 'ring-2 ring-offset-2 ring-blue-500 dark:ring-blue-400'
+                  : hoveredTone === tone.value
+                  ? 'ring-1 ring-gray-300 dark:ring-gray-600'
+                  : ''
+              }`}
               onMouseEnter={() => setHoveredTone(tone.value)}
               onMouseLeave={() => setHoveredTone(null)}
             >
@@ -275,7 +274,6 @@ export default function ToneSelector({ selectedTone, onToneChange }: ToneSelecto
                 : 'hover:ring-1 hover:ring-gray-300 dark:hover:ring-gray-600'
             }`}
             onClick={() => {
-              console.log('Clicked on tone:', tone.value);
               handleToneChange(tone.value);
             }}
           >

@@ -1,4 +1,11 @@
 import OpenAI from 'openai';
+import { Caption } from '../types';
+
+interface OpenAIError {
+  message: string;
+  code?: string;
+  status?: number;
+}
 
 // Simple in-memory cache for API responses
 interface CacheEntry {
@@ -42,6 +49,20 @@ export const getCachedChatCompletion = async (params: any) => {
   };
   
   return response;
+};
+
+export const generateCaption = async (
+  prompt: string,
+  tone: string,
+  retryCount = 0
+): Promise<Caption | null> => {
+  try {
+    // ... existing code ...
+  } catch (error: unknown) {
+    const openAIError = error as OpenAIError;
+    console.error('OpenAI API Error:', openAIError);
+    throw new Error(openAIError.message || 'Failed to generate caption');
+  }
 };
 
 export default openai; 

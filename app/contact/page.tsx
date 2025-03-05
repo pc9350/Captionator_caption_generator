@@ -89,7 +89,7 @@ export default function ContactPage() {
             </h1>
             <div className="h-1 w-20 bg-gradient-to-r from-blue-600 to-purple-600 mx-auto mb-6"></div>
             <p className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-              Have questions or feedback? I'd love to hear from you!
+              Have questions or feedback? I&apos;d love to hear from you!
             </p>
           </motion.div>
 
@@ -106,7 +106,7 @@ export default function ContactPage() {
                     Get in Touch
                   </h2>
                   <p className="text-gray-600 dark:text-gray-300 mb-6">
-                    I'm here to help and answer any questions you might have. I look forward to hearing from you!
+                    I&apos;m here to help and answer any questions you might have. I look forward to hearing from you!
                   </p>
                   
                   <div className="flex items-start mb-4">
@@ -201,7 +201,7 @@ export default function ContactPage() {
                         Message Sent Successfully!
                       </h3>
                       <p className="text-gray-600 dark:text-gray-300 mb-4">
-                        Thank you for reaching out. I'll get back to you as soon as possible.
+                        Thank you for reaching out. I&apos;ll get back to you as soon as possible.
                       </p>
                       <button
                         onClick={() => setIsSubmitted(false)}

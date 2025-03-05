@@ -74,7 +74,7 @@ export default function CaptionOptions() {
                   <div className="mt-3 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg flex items-start w-full">
                     <FiInfo className="w-4 h-4 text-blue-500 dark:text-blue-400 mt-0.5 mr-2 flex-shrink-0" />
                     <p className="text-xs text-blue-700 dark:text-blue-300 w-full">
-                      Example: "Sunset vibes at the beach 🌅 #BeachLife #SunsetLover #NaturePhotography"
+                      Example: &quot;Sunset vibes at the beach 🌅 #BeachLife #SunsetLover #NaturePhotography&quot;
                     </p>
                   </div>
                 )}
@@ -133,7 +133,7 @@ export default function CaptionOptions() {
                   <div className="mt-3 bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg flex items-start w-full">
                     <FiInfo className="w-4 h-4 text-yellow-500 dark:text-yellow-400 mt-0.5 mr-2 flex-shrink-0" />
                     <p className="text-xs text-yellow-700 dark:text-yellow-300 w-full">
-                      Example: "Coffee date with my bestie ☕❤️ Nothing beats good conversations!"
+                      Example: &quot;Coffee date with my bestie ☕❤️ Nothing beats good conversations!&quot;
                     </p>
                   </div>
                 )}
@@ -179,6 +179,24 @@ export default function CaptionOptions() {
           </div>
         </motion.div>
       </motion.div>
+
+      <div className="mb-8">
+        <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-xl border border-blue-100 dark:border-blue-800">
+          <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-4">Example with Hashtags:</h3>
+          <p className="text-blue-800 dark:text-blue-200">
+            &quot;Sunset vibes at the beach 🌅 #BeachLife #SunsetLover #NaturePhotography&quot;
+          </p>
+        </div>
+      </div>
+
+      <div className="mb-8">
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 p-6 rounded-xl border border-yellow-100 dark:border-yellow-800">
+          <h3 className="text-lg font-semibold text-yellow-900 dark:text-yellow-100 mb-4">Example with Emojis:</h3>
+          <p className="text-yellow-800 dark:text-yellow-200">
+            &quot;Coffee date with my bestie ☕❤️ Nothing beats good conversations!&quot;
+          </p>
+        </div>
+      </div>
     </div>
   );
 } 

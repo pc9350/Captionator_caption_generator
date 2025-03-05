@@ -1,21 +1,20 @@
-import { db } from '../firebase/config';
-import { 
-  collection, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  doc, 
-  getDocs, 
-  query, 
-  where, 
-  orderBy, 
-  serverTimestamp,
-  DocumentData,
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  addDoc,
+  deleteDoc,
+  query,
+  where,
+  orderBy,
   QueryDocumentSnapshot,
-  runTransaction,
-  writeBatch,
+  DocumentData,
+  Timestamp,
+  serverTimestamp,
   FirestoreError
 } from 'firebase/firestore';
+import { db } from '../firebase/config';
 import { Caption, CaptionHistory } from '../types';
 
 // Maximum number of retry attempts for Firestore operations

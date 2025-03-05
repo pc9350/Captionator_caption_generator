@@ -1,11 +1,10 @@
-import { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { FiCopy, FiRefreshCw, FiHeart, FiCheck, FiTrash2, FiInfo, FiArrowDown } from 'react-icons/fi';
-import { Caption } from '../types';
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { FiCopy, FiRefreshCw, FiSave, FiTrash2 } from 'react-icons/fi';
 import { useCaptionGeneration } from '../hooks/useCaptionGeneration';
 import { useCaptionStore } from '../store/captionStore';
-import { useFirebaseIntegration } from '../hooks/useFirebaseIntegration';
-import { useUser } from '@clerk/nextjs';
+import { Caption } from '../types';
+import toast from 'react-hot-toast';
 import Tooltip from './Tooltip';
 
 interface CaptionCardProps {
@@ -15,35 +14,25 @@ interface CaptionCardProps {
 }
 
 export default function CaptionCard({ caption, index, isSavedCaption = false }: CaptionCardProps) {
+  const [tooltipVisible, setTooltipVisible] = useState(false);
+  const [tooltipAnchor, setTooltipAnchor] = useState<HTMLButtonElement | null>(null);
+  const { regenerateCaption } = useCaptionGeneration();
+  const { saveCaption, removeCaption } = useCaptionStore();
   const [copied, setCopied] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
-  const [isSaved, setIsSaved] = useState(false);
+  const [isSaved, setIsSaved] = useState(isSavedCaption);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [showTooltip, setShowTooltip] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
-  const regenerateButtonRef = useRef<HTMLButtonElement>(null);
-  
-  const { regenerateCaption } = useCaptionGeneration();
-  const { addGeneratedCaption, saveCaption: storeSaveCaption, removeCaption } = useCaptionStore();
-  const { saveCaption, deleteCaption } = useFirebaseIntegration();
-  const { isSignedIn } = useUser();
 
-  // Check if the caption is already saved in the store
+  // Update isSaved when isSavedCaption changes
   useEffect(() => {
-    // If this is already a saved caption, we don't need to check
-    if (isSavedCaption) {
-      setIsSaved(true);
-    } else {
-      // Reset isSaved to false for non-saved captions
-      setIsSaved(false);
-    }
+    setIsSaved(isSavedCaption);
   }, [isSavedCaption]);
 
   // Ensure hashtags and emojis are arrays of strings
   const hashtags = Array.isArray(caption.hashtags) 
     ? caption.hashtags.filter((tag): tag is string => typeof tag === 'string')
     : [];
-  const emojis = caption.emojis || [];
 
   const handleCopy = async () => {
     try {
@@ -60,7 +49,6 @@ export default function CaptionCard({ caption, index, isSavedCaption = false }: 
     try {
       const newCaption = await regenerateCaption(caption.category);
       if (newCaption) {
-        addGeneratedCaption(newCaption);
         // Show notification and scroll to bottom
         setShowNotification(true);
         window.scrollTo({
@@ -81,59 +69,34 @@ export default function CaptionCard({ caption, index, isSavedCaption = false }: 
   };
 
   const handleSave = async () => {
-    if (!isSignedIn) {
-      // Show sign-in prompt or notification
-      alert('Please sign in to save captions');
-      return;
-    }
-    
     try {
       // Temporarily show the green tick
       setIsSaved(true);
       
-      const savedCaption = await saveCaption(caption);
-      if (savedCaption) {
-        // Update the local store
-        storeSaveCaption({
-          ...caption,
-          id: savedCaption.id
-        });
-        
-        // Show success feedback temporarily
-        setTimeout(() => {
-          // If we're not on the saved captions page, revert the icon back to heart
-          if (!isSavedCaption) {
-            setIsSaved(false);
-          }
-        }, 2000);
-      } else {
-        // If saving failed, revert the icon
-        setIsSaved(false);
-      }
+      // Save the caption
+      await saveCaption(caption);
+      toast.success('Caption saved successfully');
     } catch (error) {
       console.error('Error saving caption:', error);
       setIsSaved(false);
+      toast.error('Failed to save caption');
     }
   };
 
   const handleDelete = async () => {
-    if (!isSignedIn) return;
-    
     // Check if caption has an id before attempting to delete
     if (!caption.id) {
-      console.error('Cannot delete caption: No ID provided');
+      console.error('Cannot delete caption without id');
       return;
     }
-    
+
     setIsDeleting(true);
     try {
-      const success = await deleteCaption(caption.id);
-      if (success) {
-        // Remove from local store
-        removeCaption(caption.id);
-      }
+      await removeCaption(caption.id);
+      toast.success('Caption deleted successfully');
     } catch (error) {
       console.error('Error deleting caption:', error);
+      toast.error('Failed to delete caption');
     } finally {
       setIsDeleting(false);
     }
@@ -199,13 +162,12 @@ export default function CaptionCard({ caption, index, isSavedCaption = false }: 
                   onClick={handleSave}
                   aria-label="Save caption"
                 >
-                  {isSaved ? <FiCheck className="text-green-500" /> : <FiHeart />}
+                  {isSaved ? <FiSave className="text-green-500" /> : <FiSave />}
                 </motion.button>
               )}
               
               {!isSavedCaption && (
                 <motion.button
-                  ref={regenerateButtonRef}
                   className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
                   variants={buttonVariants}
                   whileHover="hover"
@@ -213,8 +175,11 @@ export default function CaptionCard({ caption, index, isSavedCaption = false }: 
                   onClick={handleRegenerate}
                   disabled={isRegenerating}
                   aria-label="Regenerate caption"
-                  onMouseEnter={() => setShowTooltip(true)}
-                  onMouseLeave={() => setShowTooltip(false)}
+                  onMouseEnter={(e) => {
+                    setTooltipVisible(true);
+                    setTooltipAnchor(e.currentTarget);
+                  }}
+                  onMouseLeave={() => setTooltipVisible(false)}
                 >
                   <FiRefreshCw className={isRegenerating ? 'animate-spin' : ''} />
                 </motion.button>
@@ -228,7 +193,7 @@ export default function CaptionCard({ caption, index, isSavedCaption = false }: 
                 onClick={handleCopy}
                 aria-label="Copy caption"
               >
-                {copied ? <FiCheck className="text-green-500" /> : <FiCopy />}
+                {copied ? <FiSave className="text-green-500" /> : <FiCopy />}
               </motion.button>
             </div>
           </div>
@@ -259,26 +224,18 @@ export default function CaptionCard({ caption, index, isSavedCaption = false }: 
       {/* Use the new Tooltip component */}
       <Tooltip 
         text="New caption will be added at the bottom"
-        isVisible={showTooltip}
-        anchorElement={regenerateButtonRef.current}
+        isVisible={tooltipVisible}
+        anchorElement={tooltipAnchor}
         position="top"
       />
       
       {/* Notification toast */}
-      <AnimatePresence>
-        {showNotification && (
-          <motion.div 
-            className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center z-50"
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 50 }}
-            transition={{ duration: 0.3 }}
-          >
-            <FiArrowDown className="mr-2" />
-            <span>New caption added at the bottom</span>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {showNotification && (
+        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center z-50">
+          <FiSave className="mr-2" />
+          <span>New caption added at the bottom</span>
+        </div>
+      )}
     </>
   );
 } 

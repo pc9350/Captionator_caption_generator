@@ -7,6 +7,7 @@ import { FiClock, FiAlertCircle, FiChevronDown, FiChevronUp } from 'react-icons/
 import CaptionCard from '@/app/components/CaptionCard';
 import { getCaptionHistory } from '@/app/utils/firebaseUtils';
 import { CaptionHistory } from '@/app/types';
+import Image from 'next/image';
 
 export default function History() {
   const { isSignedIn, isLoaded, user } = useUser();
@@ -138,11 +139,13 @@ export default function History() {
                     </div>
 
                     <div className="mb-4">
-                      <div className="aspect-w-16 aspect-h-9 bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden">
-                        <img
+                      <div className="relative w-24 h-24 rounded-lg overflow-hidden">
+                        <Image
                           src={item.imageUrl}
-                          alt="Generated caption for"
-                          className="object-cover w-full h-full"
+                          alt="Caption history thumbnail"
+                          fill
+                          className="object-cover"
+                          sizes="(max-width: 96px) 100vw, 96px"
                         />
                       </div>
                     </div>
@@ -185,7 +188,7 @@ export default function History() {
                   No caption history found
                 </h3>
                 <p className="text-gray-500 dark:text-gray-400 mb-6">
-                  You haven't generated any captions yet. Generate some captions to see your history here.
+                  You haven&apos;t generated any captions yet. Generate some captions to see your history here.
                 </p>
                 <button
                   onClick={() => window.location.href = '/dashboard'}

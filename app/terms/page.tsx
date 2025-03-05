@@ -77,7 +77,7 @@ export default function TermsOfServicePage() {
                     <li>You retain ownership of your content</li>
                     <li>You grant us a non-exclusive, worldwide, royalty-free license to use, store, and process your content for the purpose of providing our service</li>
                     <li>You are solely responsible for ensuring you have the right to share any content you upload</li>
-                    <li>You agree not to upload content that infringes on others' intellectual property rights or violates any laws</li>
+                    <li>You agree not to upload content that infringes on others&apos; intellectual property rights or violates any laws</li>
                   </ul>
                   
                   <h2 className="text-2xl font-bold text-gray-900 dark:text-white mt-8 mb-4">5. Acceptable Use</h2>
@@ -132,7 +132,7 @@ export default function TermsOfServicePage() {
                   <h2 className="text-2xl font-bold text-gray-900 dark:text-white mt-8 mb-4">10. Changes to Terms</h2>
                   <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-6">
                     We may update these Terms of Service from time to time. We will notify you of any changes by posting the new Terms on 
-                    this page and updating the "Last updated" date. Your continued use of the service after such changes constitutes your 
+                    this page and updating the &quot;Last updated&quot; date. Your continued use of the service after such changes constitutes your 
                     acceptance of the new Terms.
                   </p>
                   

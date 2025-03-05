@@ -1,47 +1,17 @@
-import { useRef, useState, useCallback, useEffect } from "react";
-import { useDropzone } from "react-dropzone";
-import { motion, AnimatePresence } from "framer-motion";
-import { Canvas } from "@react-three/fiber";
-import {
-  useGLTF,
-  PresentationControls,
-  Environment,
-  Float,
-  Text,
-} from "@react-three/drei";
-import {
-  FiUpload,
-  FiImage,
-  FiX,
-  FiAlertCircle,
-  FiPlus,
-  FiCamera,
-  FiChevronLeft,
-  FiChevronRight,
-  FiMaximize2,
-  FiGrid,
-  FiLayers,
-  FiTrash2,
-} from "react-icons/fi";
-import Lottie from "lottie-react";
-import { useImageUpload } from "../hooks/useImageUpload";
-import { useCaptionStore } from "../store/captionStore";
-
-// Import Lottie animation data
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useDropzone } from 'react-dropzone';
+import { FiUpload, FiX, FiImage, FiGrid, FiAlertCircle, FiPlus, FiChevronRight, FiMaximize2, FiLayers, FiTrash2, FiCamera, FiChevronLeft } from 'react-icons/fi';
+import { useImageUpload } from '../hooks/useImageUpload';
 import uploadAnimation from "../animations/upload-animation.json";
-
-// 3D Model component
-function Model(props: any) {
-  const { scene } = useGLTF("/models/photo_frame.glb");
-  return <primitive object={scene} {...props} />;
-}
+import Lottie from "lottie-react";
+import { useCaptionStore } from "../store/captionStore";
+import Image from 'next/image';
 
 export default function ImageUploader() {
   const { uploadImage, resetUpload, error, validateBlobUrls } =
     useImageUpload();
   const {
-    selectedImage,
-    imageUrl,
     isUploading,
     uploadProgress,
     uploadedImages,
@@ -49,7 +19,6 @@ export default function ImageUploader() {
     addUploadedImage,
     setImageUrl,
   } = useCaptionStore();
-  const [isDragging, setIsDragging] = useState(false);
   const [activeImageIndex, setLocalActiveImageIndex] = useState(0);
   const [isGridView, setIsGridView] = useState(false);
   const [showFullscreen, setShowFullscreen] = useState(false);
@@ -70,63 +39,8 @@ export default function ImageUploader() {
     }
   }, [uploadedImages, activeImageIndex]);
 
-  // Validate image URLs whenever uploadedImages change
-  useEffect(() => {
-    const checkImageValidity = async () => {
-      console.log("Checking validity of", uploadedImages.length, "images");
-
-      const validityMap: Record<number, boolean> = {};
-
-      for (let i = 0; i < uploadedImages.length; i++) {
-        const img = uploadedImages[i];
-        try {
-          // Create a new Image to test if URL loads correctly
-          const testImg = new Image();
-          const isValid = await new Promise<boolean>((resolve) => {
-            testImg.onload = () => {
-              console.log(
-                `Image ${i} is valid:`,
-                img.url.substring(0, 30) + "..."
-              );
-              resolve(true);
-            };
-            testImg.onerror = () => {
-              console.error(
-                `Image ${i} is invalid:`,
-                img.url.substring(0, 30) + "..."
-              );
-              resolve(false);
-            };
-            testImg.src = img.url;
-          });
-
-          validityMap[i] = isValid;
-        } catch (err) {
-          console.error(`Error validating image ${i}:`, err);
-          validityMap[i] = false;
-        }
-      }
-
-      setImageValidityMap(validityMap);
-      console.log("Image validity map:", validityMap);
-
-      // If we find any invalid images, try to validate/fix blob URLs
-      const hasInvalidImages = Object.values(validityMap).some(
-        (valid) => !valid
-      );
-      if (hasInvalidImages && !isValidatingUrls) {
-        console.log("Found invalid images, attempting to fix blob URLs");
-        handleValidateBlobUrls();
-      }
-    };
-
-    if (uploadedImages.length > 0) {
-      checkImageValidity();
-    }
-  }, [uploadedImages]);
-
   // Function to handle validation and fixing of blob URLs
-  const handleValidateBlobUrls = () => {
+  const handleValidateBlobUrls = useCallback(() => {
     if (isValidatingUrls) return;
 
     setIsValidatingUrls(true);
@@ -146,7 +60,54 @@ export default function ImageUploader() {
     } finally {
       setIsValidatingUrls(false);
     }
-  };
+  }, [isValidatingUrls, uploadedImages, validateBlobUrls]);
+
+  // Update the image validity check
+  const checkImageValidity = useCallback(async () => {
+    console.log("Checking validity of", uploadedImages.length, "images");
+
+    const validityMap: Record<number, boolean> = {};
+
+    for (let i = 0; i < uploadedImages.length; i++) {
+      const img = uploadedImages[i];
+      try {
+        const testImg = document.createElement('img');
+        const isValid = await new Promise<boolean>((resolve) => {
+          testImg.onload = () => {
+            console.log(`Image ${i} is valid:`, img.url.substring(0, 30) + "...");
+            resolve(true);
+          };
+          testImg.onerror = () => {
+            console.error(`Image ${i} is invalid:`, img.url.substring(0, 30) + "...");
+            resolve(false);
+          };
+          testImg.src = img.url;
+        });
+
+        validityMap[i] = isValid;
+      } catch (err) {
+        console.error(`Error validating image ${i}:`, err);
+        validityMap[i] = false;
+      }
+    }
+
+    setImageValidityMap(validityMap);
+    console.log("Image validity map:", validityMap);
+
+    // If we find any invalid images, try to validate/fix blob URLs
+    const hasInvalidImages = Object.values(validityMap).some((valid) => !valid);
+    if (hasInvalidImages && !isValidatingUrls) {
+      console.log("Found invalid images, attempting to fix blob URLs");
+      handleValidateBlobUrls();
+    }
+  }, [uploadedImages, isValidatingUrls, handleValidateBlobUrls]);
+
+  // Validate image URLs whenever uploadedImages change
+  useEffect(() => {
+    if (uploadedImages.length > 0) {
+      checkImageValidity();
+    }
+  }, [uploadedImages, checkImageValidity]);
 
   // Utility function to convert a blob URL to a data URL
   const blobToDataUrl = async (blobUrl: string): Promise<string> => {
@@ -248,10 +209,6 @@ export default function ImageUploader() {
     multiple: true, // Allow multiple file selection
     noClick: true, // Prevent opening file dialog on click
   });
-
-  // Update dragging state for animation
-  const handleDragEnter = useCallback(() => setIsDragging(true), []);
-  const handleDragLeave = useCallback(() => setIsDragging(false), []);
 
   // Handle manual file selection with debounce to prevent double opening
   const [isSelectingFile, setIsSelectingFile] = useState(false);
@@ -410,8 +367,6 @@ export default function ImageUploader() {
             ? "bg-gray-900"
             : "bg-gradient-to-br from-gray-800 to-gray-900"
         }`}
-        onDragEnter={handleDragEnter}
-        onDragLeave={handleDragLeave}
       >
         <input {...getInputProps()} />
         <input 
@@ -576,9 +531,11 @@ export default function ImageUploader() {
                           }}
                         >
                           <div className="absolute inset-0 flex items-center justify-center bg-gray-800/30">
-                            <img
+                            <Image
                               src={image.url}
                               alt={`Uploaded ${index + 1}`}
+                              width={500}
+                              height={500}
                               className="max-w-full max-h-full object-contain"
                               style={{
                                 backgroundColor: "#2d3748",
@@ -589,8 +546,8 @@ export default function ImageUploader() {
                                 console.error('Image failed to load:', e);
                                 e.currentTarget.src = '/fallback.svg';
                               }}
-                />
-              </div>
+                            />
+                          </div>
                         </div>
                       );
                     })}
@@ -623,9 +580,11 @@ export default function ImageUploader() {
                     {/* Active image */}
                     <div className="relative w-full h-full flex items-center justify-center">
                       {uploadedImages[activeImageIndex] && (
-                        <img
+                        <Image
                           src={uploadedImages[activeImageIndex].url}
                           alt={`Uploaded ${activeImageIndex + 1}`}
+                          width={500}
+                          height={500}
                           className="max-w-full max-h-full object-contain"
                           onError={(e) => {
                             console.error('Image failed to load:', e);
@@ -736,9 +695,11 @@ export default function ImageUploader() {
           className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
           onClick={() => setShowFullscreen(false)}
         >
-          <img
+          <Image
             src={activeImageUrl}
             alt="Fullscreen preview"
+            width={1000}
+            height={1000}
             className="max-w-full max-h-full object-contain"
           />
           <button

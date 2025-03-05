@@ -1,6 +1,7 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getFirestore, connectFirestoreEmulator, Firestore, enableIndexedDbPersistence, PersistenceSettings } from 'firebase/firestore';
+import { getFirestore, connectFirestoreEmulator, Firestore, enableIndexedDbPersistence } from 'firebase/firestore';
 import { getStorage, connectStorageEmulator, FirebaseStorage } from 'firebase/storage';
+import { getAuth, Auth } from 'firebase/auth';
 
 // Check if Firebase configuration is complete
 const isFirebaseConfigValid = () => {
@@ -12,20 +13,6 @@ const isFirebaseConfigValid = () => {
     process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
     process.env.NEXT_PUBLIC_FIREBASE_APP_ID
   ];
-  
-  const missingVars = [
-    'NEXT_PUBLIC_FIREBASE_API_KEY',
-    'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN',
-    'NEXT_PUBLIC_FIREBASE_PROJECT_ID',
-    'NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET',
-    'NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID',
-    'NEXT_PUBLIC_FIREBASE_APP_ID'
-  ].filter((key, index) => !requiredEnvVars[index]);
-  
-  if (missingVars.length > 0) {
-    console.error(`Missing Firebase environment variables: ${missingVars.join(', ')}`);
-    return false;
-  }
   
   return requiredEnvVars.every(Boolean);
 };
@@ -41,10 +28,11 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
-// Initialize Firebase conditionally
-let app: FirebaseApp | null = null;
+// Initialize Firebase
+let app: FirebaseApp;
 let db: Firestore;
 let storage: FirebaseStorage;
+let auth: Auth;
 
 const initializeFirebase = () => {
   try {
@@ -74,8 +62,9 @@ const initializeFirebase = () => {
         });
       }
       
-      // Initialize Storage
+      // Initialize Storage and Auth
       storage = getStorage(app);
+      auth = getAuth(app);
       
       // Use emulators in development if needed
       if (process.env.NODE_ENV === 'development' && process.env.USE_FIREBASE_EMULATORS === 'true') {
@@ -92,25 +81,29 @@ const initializeFirebase = () => {
     } else {
       console.warn('Firebase configuration is incomplete. Firebase features will be disabled.');
       // Create dummy objects that won't throw errors when used
+      app = {} as FirebaseApp;
       db = {} as Firestore;
       storage = {} as FirebaseStorage;
+      auth = {} as Auth;
       return false;
     }
   } catch (error) {
     console.error('Error initializing Firebase:', error);
     // Create dummy objects that won't throw errors when used
+    app = {} as FirebaseApp;
     db = {} as Firestore;
     storage = {} as FirebaseStorage;
+    auth = {} as Auth;
     return false;
   }
 };
 
 // Initialize Firebase
-const isInitialized = initializeFirebase();
-
-export { app, db, storage };
+initializeFirebase();
 
 // Helper function to check if Firebase is properly initialized
-export const isFirebaseInitialized = (): boolean => {
-  return !!app && db !== null && storage !== null && isFirebaseConfigValid();
-}; 
+export const checkFirebaseStatus = (): boolean => {
+  return !!app && Object.keys(app).length > 0 && Object.keys(db).length > 0 && Object.keys(storage).length > 0;
+};
+
+export { app, db, storage, auth }; 

@@ -1,49 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server';
-import openai, { getCachedChatCompletion } from '@/app/lib/openai';
-import { CaptionCategory, CaptionTone } from '@/app/types';
+import { getCachedChatCompletion } from '@/app/lib/openai';
+import { Caption } from '@/app/types';
 import { ChatCompletionContentPart } from 'openai/resources/chat/completions';
 
+interface JsonResponse {
+  text: string;
+  category: string;
+  hashtags?: string[];
+  emojis?: string[];
+}
+
 // Helper function to extract JSON from a string that might contain markdown formatting
-const extractJsonFromString = (str: string): any => {
-  // Try to extract JSON from markdown code blocks
-  const markdownJsonRegex = /```(?:json)?\s*(\{[\s\S]*?\})\s*```/;
-  const markdownMatch = str.match(markdownJsonRegex);
-  
-  if (markdownMatch && markdownMatch[1]) {
-    try {
-      return JSON.parse(markdownMatch[1]);
-    } catch (e) {
-      console.error('Failed to parse JSON from markdown block:', e);
-    }
+const extractJsonFromString = (str: string): JsonResponse => {
+  try {
+    // Find the first occurrence of '{' and the last occurrence of '}'
+    const start = str.indexOf('{');
+    const end = str.lastIndexOf('}');
+    if (start === -1 || end === -1) throw new Error('No JSON object found in string');
+    
+    // Extract and parse the JSON object
+    const jsonStr = str.slice(start, end + 1);
+    return JSON.parse(jsonStr);
+  } catch (error) {
+    console.error('Error extracting JSON:', error);
+    return {
+      text: str,
+      category: 'General',
+    };
   }
-  
-  // Try to extract any JSON object from the string
-  const jsonRegex = /(\{[\s\S]*\})/;
-  const jsonMatch = str.match(jsonRegex);
-  
-  if (jsonMatch && jsonMatch[1]) {
-    try {
-      return JSON.parse(jsonMatch[1]);
-    } catch (e) {
-      console.error('Failed to parse JSON from string:', e);
-    }
-  }
-  
-  // Return default empty captions array if no valid JSON found
-  return { captions: [] };
 };
 
 // Helper function to normalize caption fields
-const normalizeCaptions = (captions: any[]): any[] => {
-  return captions.map(caption => {
-    // Ensure consistent field naming
-    return {
-      text: caption.caption || caption.text || 'No caption text provided',
-      category: caption.category || 'General',
-      hashtags: caption.hashtags || [],
-      emojis: caption.emojis || []
-    };
-  });
+const normalizeCaptions = (captions: JsonResponse[]): Caption[] => {
+  return captions.map(caption => ({
+    text: caption.text || '',
+    category: caption.category || 'General',
+    hashtags: caption.hashtags || [],
+    emojis: caption.emojis || []
+  }));
 };
 
 export async function POST(req: NextRequest) {
@@ -191,31 +185,38 @@ export async function POST(req: NextRequest) {
       }
 
       return NextResponse.json(parsedContent);
-    } catch (apiError: any) {
+    } catch (apiError: unknown) {
       console.error('OpenAI API error:', apiError);
       
       // Handle specific OpenAI API errors
-      if (apiError.status === 400) {
-        return NextResponse.json(
-          { error: 'Invalid request to OpenAI API. The images may be too large or in an unsupported format.' },
-          { status: 400 }
-        );
-      } else if (apiError.status === 429) {
-        return NextResponse.json(
-          { error: 'Rate limit exceeded. Please try again later.' },
-          { status: 429 }
-        );
-      } else {
-        return NextResponse.json(
-          { error: `OpenAI API error: ${apiError.message || 'Unknown error'}` },
-          { status: apiError.status || 500 }
-        );
+      if (apiError && typeof apiError === 'object' && 'status' in apiError) {
+        const error = apiError as { status: number; message?: string };
+        if (error.status === 400) {
+          return NextResponse.json(
+            { error: 'Invalid request to OpenAI API. The images may be too large or in an unsupported format.' },
+            { status: 400 }
+          );
+        } else if (error.status === 429) {
+          return NextResponse.json(
+            { error: 'Rate limit exceeded. Please try again later.' },
+            { status: 429 }
+          );
+        } else {
+          return NextResponse.json(
+            { error: `OpenAI API error: ${error.message || 'Unknown error'}` },
+            { status: error.status || 500 }
+          );
+        }
       }
+      return NextResponse.json(
+        { error: 'An unknown error occurred with the OpenAI API' },
+        { status: 500 }
+      );
     }
-  } catch (error: any) {
-    console.error('Error generating captions:', error);
+  } catch (error: unknown) {
+    console.error('Error in caption generation:', error);
     return NextResponse.json(
-      { error: `Failed to generate captions: ${error.message || 'Unknown error'}` },
+      { error: error instanceof Error ? error.message : 'An unknown error occurred' },
       { status: 500 }
     );
   }

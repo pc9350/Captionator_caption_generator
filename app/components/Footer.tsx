@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { FiGithub, FiTwitter, FiInstagram, FiHeart } from 'react-icons/fi';
+import { FiGithub, FiGlobe, FiHeart } from 'react-icons/fi';
 
 export default function Footer() {
   return (
@@ -11,11 +11,11 @@ export default function Footer() {
               Captionator
             </h3>
             <p className="text-gray-600 dark:text-gray-400 mb-4 max-w-md">
-              Generate engaging, context-aware Instagram captions with AI. Upload your images and get captions that match your style and tone.
+              Generate engaging, context-aware captions for any social media platform with AI. Upload your images and get captions that match your style and tone.
             </p>
             <div className="flex space-x-4">
               <a
-                href="https://github.com"
+                href="https://github.com/pc9350"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
@@ -24,22 +24,13 @@ export default function Footer() {
                 <FiGithub className="w-5 h-5" />
               </a>
               <a
-                href="https://twitter.com"
+                href="https://pranavchhabra.com"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
-                aria-label="Twitter"
+                aria-label="Personal Website"
               >
-                <FiTwitter className="w-5 h-5" />
-              </a>
-              <a
-                href="https://instagram.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
-                aria-label="Instagram"
-              >
-                <FiInstagram className="w-5 h-5" />
+                <FiGlobe className="w-5 h-5" />
               </a>
             </div>
           </div>
@@ -129,7 +120,7 @@ export default function Footer() {
           <p className="text-gray-500 dark:text-gray-400 text-center flex items-center justify-center">
             &copy; {new Date().getFullYear()} Captionator. All rights reserved.
             <span className="inline-flex items-center ml-1">
-              Made with <FiHeart className="w-4 h-4 mx-1 text-red-500" /> by Captionator Team
+              Made with <FiHeart className="w-4 h-4 mx-1 text-red-500" /> by Pranav Chhabra
             </span>
           </p>
         </div>

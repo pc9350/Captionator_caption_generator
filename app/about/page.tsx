@@ -51,7 +51,7 @@ export default function AboutPage() {
                   </p>
                   
                   <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-6">
-                    This application leverages the power of artificial intelligence to analyze your images and generate creative, engaging captions tailored to your content. Whether you're looking for something funny, inspirational, or trendy, Insta Caption Generator has got you covered.
+                    This application leverages the power of artificial intelligence to analyze your images and generate creative, engaging captions tailored to your content. Whether you&apos;re looking for something funny, inspirational, or trendy, Insta Caption Generator has got you covered.
                   </p>
                   
                   <h3 className="text-xl font-bold text-gray-900 dark:text-white mt-8 mb-4">
@@ -59,11 +59,11 @@ export default function AboutPage() {
                   </h3>
                   
                   <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-6">
-                    Hi! I'm <a href="https://pranavchhabra.com/" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">Pranav Chhabra</a>, a passionate developer with a love for creating useful applications that solve real-world problems. I specialize in web development using modern technologies like React, Next.js, and various AI integrations.
+                    Hi! I&apos;m <a href="https://pranavchhabra.com/" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">Pranav Chhabra</a>, a passionate developer with a love for creating useful applications that solve real-world problems. I specialize in web development using modern technologies like React, Next.js, and various AI integrations.
                   </p>
                   
                   <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-6">
-                    When I'm not coding, you can find me exploring new technologies, contributing to open-source projects, or perfecting my own Instagram feed with the help of this very tool! Check out my <a href="https://pranavchhabra.com/" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">portfolio website</a> to see more of my work.
+                    When I&apos;m not coding, you can find me exploring new technologies, contributing to open-source projects, or perfecting my own Instagram feed with the help of this very tool! Check out my <a href="https://pranavchhabra.com/" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">portfolio website</a> to see more of my work.
                   </p>
                   
                   <h3 className="text-xl font-bold text-gray-900 dark:text-white mt-8 mb-4">
@@ -74,7 +74,7 @@ export default function AboutPage() {
                     <li>Next.js for the frontend and API routes</li>
                     <li>Tailwind CSS for styling</li>
                     <li>Firebase for authentication and database</li>
-                    <li>OpenAI's GPT models for caption generation</li>
+                    <li>OpenAI&apos;s GPT models for caption generation</li>
                     <li>Clerk for user authentication</li>
                     <li>Framer Motion for animations</li>
                   </ul>
@@ -124,7 +124,7 @@ export default function AboutPage() {
                   
                   <div className="border-t border-gray-200 dark:border-gray-700 pt-6 mt-8">
                     <p className="text-gray-600 dark:text-gray-400 text-sm">
-                      If you have any questions, feedback, or feature requests, please don't hesitate to reach out. I'm always looking to improve this tool and make it more useful for everyone.
+                      If you have any questions, feedback, or feature requests, please don&apos;t hesitate to reach out. I&apos;m always looking to improve this tool and make it more useful for everyone.
                     </p>
                   </div>
                 </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useCaptionStore } from '../store/captionStore';
 
 // Helper function to convert File to base64
@@ -108,18 +108,15 @@ export const useImageUpload = () => {
     clearUploadedImages
   } = useCaptionStore();
 
-  // Helper function to regenerate a blob URL from a file if needed
-  const regenerateBlobUrl = (file: File): string => {
+  const handleImageUpload = useCallback(async (file: File) => {
     try {
-      // Create a new blob URL from the file
-      const newUrl = URL.createObjectURL(file);
-      console.log('Regenerated blob URL:', newUrl, 'for file:', file.name);
-      return newUrl;
-    } catch (err) {
-      console.error('Failed to regenerate blob URL:', err);
-      return '';
+      const blobUrl = URL.createObjectURL(file);
+      return blobUrl;
+    } catch (error) {
+      console.error('Error creating blob URL:', error);
+      return null;
     }
-  };
+  }, []);
 
   // Function to validate and fix blob URLs if needed
   const validateBlobUrls = () => {

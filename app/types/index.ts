@@ -5,7 +5,7 @@ export interface Caption {
   hashtags?: string[];
   emojis?: string[];
   userId?: string;
-  createdAt?: any;
+  createdAt?: Date;
 }
 
 export type CaptionCategory = 
@@ -46,7 +46,7 @@ export interface CaptionHistory {
   userId: string;
   imageUrl: string;
   captions: Caption[];
-  createdAt: any;
+  createdAt: Date;
 }
 
 export interface ImageAnalysisResult {
