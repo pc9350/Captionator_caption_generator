@@ -36,7 +36,14 @@ class CreateManifestPlugin {
 const nextConfig = {
   reactStrictMode: true,
   images: {
-    domains: ['firebasestorage.googleapis.com'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'firebasestorage.googleapis.com',
+        port: '',
+        pathname: '/**',
+      },
+    ],
   },
   eslint: {
     ignoreDuringBuilds: true,

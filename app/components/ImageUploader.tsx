@@ -551,6 +551,8 @@ export default function ImageUploader() {
                                 backgroundColor: "#2d3748",
                                 filter: "drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1))",
                                 padding: "2px",
+                                width: "auto",
+                                height: "auto"
                               }}
                               onError={(e) => {
                                 console.error('Image failed to load:', e);
@@ -596,6 +598,10 @@ export default function ImageUploader() {
                           width={500}
                           height={500}
                           className="max-w-full max-h-full object-contain"
+                          style={{
+                            width: "auto",
+                            height: "auto"
+                          }}
                           onError={(e) => {
                             console.error('Image failed to load:', e);
                             e.currentTarget.src = '/fallback.svg';
@@ -711,6 +717,10 @@ export default function ImageUploader() {
             width={1000}
             height={1000}
             className="max-w-full max-h-full object-contain"
+            style={{
+              width: "auto",
+              height: "auto"
+            }}
           />
           <button
             className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/50 flex items-center justify-center text-white"
