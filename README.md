@@ -1,6 +1,6 @@
 # Captionator - AI-Powered Instagram Caption Generator
 
-Captionator is a modern web application that uses AI to generate engaging and creative captions for your Instagram posts. Simply upload an image, select a tone, and get multiple caption options tailored to your content.
+Captionator is a modern web application that uses AI to generate engaging and creative captions for your posts. Simply upload an image, select a tone, and get multiple caption options tailored to your content.
 
 ## Features
 
@@ -8,7 +8,7 @@ Captionator is a modern web application that uses AI to generate engaging and cr
 - **Multiple Tone Options**: Choose from casual, professional, funny, inspirational, or storytelling tones
 - **Save Favorite Captions**: Save your favorite captions for later use
 - **Caption History**: View your past caption generations
-- **User Authentication**: Secure user accounts with Clerk authentication
+- **User Authentication**: Secure user accounts with Firebase Authentication
 - **Responsive Design**: Works seamlessly on mobile, tablet, and desktop devices
 - **Dark Mode Support**: Comfortable viewing in any lighting condition
 
@@ -17,7 +17,7 @@ Captionator is a modern web application that uses AI to generate engaging and cr
 - **Frontend**: Next.js 14, React, Tailwind CSS, Framer Motion
 - **Backend**: Next.js API Routes
 - **AI**: OpenAI API
-- **Authentication**: Clerk
+- **Authentication**: Firebase Authentication
 - **Database**: Firebase Firestore
 - **Storage**: Firebase Storage
 - **Deployment**: Vercel
@@ -29,7 +29,6 @@ Captionator is a modern web application that uses AI to generate engaging and cr
 - Node.js 18+ and npm/yarn
 - OpenAI API key
 - Firebase project
-- Clerk account
 
 ### Installation
 
@@ -90,10 +89,3 @@ Captionator is a modern web application that uses AI to generate engaging and cr
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Acknowledgements
-
-- OpenAI for providing the AI capabilities
-- Clerk for authentication services
-- Firebase for database and storage solutions
-- Vercel for hosting and deployment
