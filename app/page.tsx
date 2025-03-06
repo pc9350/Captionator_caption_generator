@@ -14,7 +14,7 @@ export default function Home() {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 dark:from-gray-900 dark:via-indigo-950 dark:to-purple-950 h-screen flex items-center">
+      <div className="relative overflow-hidden bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 dark:from-gray-900 dark:via-indigo-950 dark:to-purple-950 min-h-screen flex items-center">
         {/* Background decorative elements */}
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden opacity-20 pointer-events-none">
           <div className="absolute top-10 left-10 w-64 h-64 rounded-full bg-gradient-to-r from-blue-400 to-indigo-500 blur-3xl"></div>
@@ -22,29 +22,29 @@ export default function Home() {
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 blur-3xl opacity-30"></div>
         </div>
 
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-24 sm:pt-16 md:pt-20">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pt-32 sm:pt-36 md:pt-32 pb-16">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-16 items-center">
             {/* Text Content */}
-            <div className="text-center lg:text-left space-y-6 md:space-y-8">
+            <div className="text-center lg:text-left space-y-4 sm:space-y-6 md:space-y-8">
               <div className="hidden sm:inline-block px-3 py-1 bg-indigo-100 dark:bg-indigo-900/50 rounded-full text-indigo-800 dark:text-indigo-300 font-medium text-xs sm:text-sm mb-2 animate-pulse">
                 AI-Powered Caption Generator
               </div>
-              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 leading-tight pb-2">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 leading-tight pb-2">
                 Perfect Captions for Any Image
               </h1>
-              <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-gray-700 dark:text-gray-300 leading-relaxed">
+              <p className="text-sm sm:text-base md:text-lg text-gray-700 dark:text-gray-300 leading-relaxed">
                 Transform your social media presence with AI-generated captions that perfectly match your content, style, and tone.
               </p>
-              <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center lg:justify-start">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start">
                 <Link
                   href="/auth"
-                  className="px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-medium transition-all duration-300 text-center shadow-lg hover:shadow-xl transform hover:-translate-y-1 text-base sm:text-lg"
+                  className="px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-medium transition-all duration-300 text-center shadow-lg hover:shadow-xl transform hover:-translate-y-1 text-sm sm:text-base"
                 >
                   Get Started Free
                 </Link>
                 <Link
                   href="#features"
-                  className="px-6 sm:px-8 py-3 sm:py-4 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm text-gray-900 dark:text-white rounded-xl font-medium hover:bg-white dark:hover:bg-gray-700 transition-all duration-300 text-center flex items-center justify-center shadow-lg text-base sm:text-lg group"
+                  className="px-4 sm:px-6 py-2.5 sm:py-3 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm text-gray-900 dark:text-white rounded-xl font-medium hover:bg-white dark:hover:bg-gray-700 transition-all duration-300 text-center flex items-center justify-center shadow-lg text-sm sm:text-base group"
                 >
                   Explore Features
                   <FiChevronDown className="ml-2 group-hover:translate-y-1 transition-transform" />
@@ -179,10 +179,11 @@ export default function Home() {
           
           {/* Scroll Indicator */}
           <motion.div 
-            className="absolute left-1/2 transform -translate-x-1/2 cursor-pointer"
+            className="absolute left-0 right-0 mx-auto bottom-8 sm:bottom-10 flex justify-center cursor-pointer"
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 1, duration: 0.5 }}
+            style={{ width: 'fit-content' }}
           >
             <Link href="#features">
               <motion.div
@@ -190,8 +191,8 @@ export default function Home() {
                 animate={{ y: [0, 10, 0] }}
                 transition={{ repeat: Infinity, duration: 1.5 }}
               >
-                <p className="text-gray-600 dark:text-gray-300 mb-0 text-xs font-medium">Scroll Down</p>
-                <FiChevronDown className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                <p className="text-gray-600 dark:text-gray-300 mb-0 text-xs font-medium text-center">Scroll Down</p>
+                <FiChevronDown className="w-5 h-5 text-indigo-600 dark:text-indigo-400 mx-auto" />
               </motion.div>
             </Link>
           </motion.div>
