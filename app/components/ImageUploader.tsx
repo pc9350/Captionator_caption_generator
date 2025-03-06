@@ -46,7 +46,7 @@ export default function ImageUploader() {
     setIsValidatingUrls(true);
     try {
       validateBlobUrls();
-      console.log("Blob URL validation complete");
+      // console.log("Blob URL validation complete");
       // Force recheck of image validity
       setTimeout(() => {
         const newValidityMap: Record<number, boolean> = {};
@@ -144,7 +144,7 @@ export default function ImageUploader() {
     setIsConvertingToDataUrl(true);
 
     try {
-      console.log("Repairing images by converting blob URLs to data URLs...");
+      // console.log("Repairing images by converting blob URLs to data URLs...");
       let needsUpdate = false;
       const updatedImages = [...uploadedImages];
 
@@ -154,11 +154,11 @@ export default function ImageUploader() {
           imageValidityMap[i] === false &&
           updatedImages[i].url.startsWith("blob:")
         ) {
-          console.log(`Converting image ${i} from blob URL to data URL...`);
+          // console.log(`Converting image ${i} from blob URL to data URL...`);
           const dataUrl = await blobToDataUrl(updatedImages[i].url);
 
           if (dataUrl) {
-            console.log(`Successfully converted image ${i} to data URL`);
+            // console.log(`Successfully converted image ${i} to data URL`);
             // Update the image URL to the data URL
             updatedImages[i] = {
               ...updatedImages[i],
@@ -170,7 +170,7 @@ export default function ImageUploader() {
       }
 
       if (needsUpdate) {
-        console.log("Updating store with repaired images...");
+        // console.log("Updating store with repaired images...");
         // Update the store with the new images
         clearUploadedImages();
         updatedImages.forEach((img) => addUploadedImage(img));
@@ -193,11 +193,11 @@ export default function ImageUploader() {
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
       if (acceptedFiles && acceptedFiles.length > 0) {
-        console.log(
-          "Dropzone onDrop called with",
-          acceptedFiles.length,
-          "files"
-        );
+        // console.log(
+        //   "Dropzone onDrop called with",
+        //   acceptedFiles.length,
+        //   "files"
+        // );
         // Process all uploaded files
         for (const file of acceptedFiles) {
           if (file.type.startsWith("image/")) {
@@ -239,12 +239,12 @@ export default function ImageUploader() {
   const handleFileInputChange = async (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
-    console.log("File input change event triggered");
+    // console.log("File input change event triggered");
     e.preventDefault(); // Prevent default
     e.stopPropagation(); // Stop event propagation
 
     if (e.target.files && e.target.files.length > 0) {
-      console.log("Processing", e.target.files.length, "files from file input");
+      // console.log("Processing", e.target.files.length, "files from file input");
 
       // Upload all selected files
       for (let i = 0; i < e.target.files.length; i++) {
@@ -327,27 +327,6 @@ export default function ImageUploader() {
   // Get the current active image URL
   const activeImageUrl =
     uploadedImages.length > 0 ? uploadedImages[activeImageIndex]?.url : null;
-
-  // Debug log for images
-  useEffect(() => {
-    if (uploadedImages.length > 0) {
-      console.log("Uploaded images:", uploadedImages);
-      console.log("First image URL:", uploadedImages[0]?.url);
-      console.log(
-        "NOTE: Blob URLs cannot be accessed by clicking them directly. They only work in the img tags within the app."
-      );
-
-      // Verify the first image actually has content (better debug)
-      if (uploadedImages[0]?.file) {
-        console.log(
-          "First image file size:",
-          Math.round(uploadedImages[0].file.size / 1024),
-          "KB"
-        );
-        console.log("First image type:", uploadedImages[0].file.type);
-      }
-    }
-  }, [uploadedImages]);
 
   return (
     <div className="w-full max-w-3xl mx-auto">

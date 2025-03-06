@@ -180,7 +180,7 @@ export const useImageUpload = () => {
     }
 
     try {
-      console.log('Starting upload process for file:', file.name, 'size:', Math.round(file.size / 1024), 'KB');
+      // console.log('Starting upload process for file:', file.name, 'size:', Math.round(file.size / 1024), 'KB');
       setIsUploading(true);
       setSelectedImage(file);
       setError(null);
@@ -199,14 +199,14 @@ export const useImageUpload = () => {
       // Create a persistent blob URL for display in the UI
       // This URL will remain valid until explicitly revoked
       const imageUrl = URL.createObjectURL(file);
-      console.log('Created blob URL:', imageUrl, 'for file:', file.name);
+      // console.log('Created blob URL:', imageUrl, 'for file:', file.name);
       
       // Resize the image to reduce file size
       let resizedImage = await resizeImage(file);
-      console.log('Resized image successfully. Original size:', Math.round(file.size / 1024), 'KB');
+      // console.log('Resized image successfully. Original size:', Math.round(file.size / 1024), 'KB');
       
       let base64Image = await fileToBase64(new File([resizedImage], file.name, { type: 'image/jpeg' }));
-      console.log('Converted to base64, length:', base64Image.length.toString().substring(0, 6) + '...');
+      // console.log('Converted to base64, length:', base64Image.length.toString().substring(0, 6) + '...');
       
       // If the base64 is still too large, resize again with lower quality
       if (isBase64TooLarge(base64Image)) {
@@ -238,7 +238,7 @@ export const useImageUpload = () => {
         base64: base64Image 
       };
       
-      console.log('Adding image to store with URL:', imageUrl.substring(0, 30) + '...');
+      // console.log('Adding image to store with URL:', imageUrl.substring(0, 30) + '...');
       
       // Add to uploaded images array and set current image
       // Store both the blob URL for UI display and base64 for API requests

@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Cost-saving measure: Limit the number of images processed
-    const MAX_IMAGES = 3;
+    const MAX_IMAGES = 5;
     const processedImageData = imageData.slice(0, MAX_IMAGES);
     if (imageData.length > MAX_IMAGES) {
       console.log(`Limiting image processing from ${imageData.length} to ${MAX_IMAGES} images to save costs`);
@@ -334,7 +334,7 @@ export async function POST(req: NextRequest) {
       parsedContent.captions = normalizeCaptions(parsedContent.captions);
       
       // Cost-saving measure: Limit the number of captions returned
-      const MAX_CAPTIONS = 8;
+      const MAX_CAPTIONS = 6;
       if (parsedContent.captions.length > MAX_CAPTIONS) {
         parsedContent.captions = parsedContent.captions.slice(0, MAX_CAPTIONS);
       }

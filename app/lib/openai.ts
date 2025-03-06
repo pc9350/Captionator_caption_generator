@@ -91,6 +91,7 @@ export const generateCaption = async (
         category: tone,
         hashtags: parsedResponse.hashtags || [],
         createdAt: new Date(),
+        viral_score: parsedResponse.viral_score || 0,
       };
     } catch (parseError) {
       console.error('Error parsing OpenAI response:', parseError);
@@ -105,6 +106,7 @@ export const generateCaption = async (
         category: tone,
         hashtags: [],
         createdAt: new Date(),
+        viral_score: caption.viral_score || 0,
       };
     }
   } catch (error: unknown) {
