@@ -2,16 +2,16 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { useUser } from '@clerk/nextjs';
 import ImageUploader from '@/app/components/ImageUploader';
 import ToneSelector from '@/app/components/ToneSelector';
 import CaptionOptions from '@/app/components/CaptionOptions';
 import GenerateButton from '@/app/components/GenerateButton';
 import CaptionResults from '@/app/components/CaptionResults';
 import { FiSettings } from 'react-icons/fi';
+import { useAuth } from '@/app/context/AuthContext';
 
 export default function Dashboard() {
-  const { isSignedIn, user, isLoaded } = useUser();
+  const { user } = useAuth();
   const [selectedTone, setSelectedTone] = useState('casual');
   
   type TabType = 'tones' | 'options';
@@ -38,7 +38,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 py-12">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 pt-28 pb-12">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div 
           className="max-w-5xl mx-auto"
@@ -51,9 +51,9 @@ export default function Dashboard() {
             variants={itemVariants}
           >
             <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-3 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">
-              {isLoaded && isSignedIn
-                ? `Welcome, ${user?.firstName || 'there'}!`
-                : 'Generate Instagram Captions'}
+              {user
+                ? `Welcome to Caption Generator`
+                : 'Instagram Caption Generator'}
             </h1>
             <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto text-lg">
               Upload an image and our AI will generate engaging, context-aware captions for your Instagram posts.

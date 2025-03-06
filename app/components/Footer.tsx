@@ -1,37 +1,59 @@
+'use client';
+
+import { FiGithub, FiGlobe } from 'react-icons/fi';
 import Link from 'next/link';
-import { FiGithub, FiGlobe, FiHeart } from 'react-icons/fi';
+import Image from 'next/image';
+import { motion } from 'framer-motion';
 
 export default function Footer() {
   return (
     <footer className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800">
-      <div className="container mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          <div className="col-span-1 md:col-span-2">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
-              Captionator
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-4 max-w-md">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
+          {/* Company Info */}
+          <div className="col-span-1 lg:col-span-2">
+            <div className="flex items-center mb-4">
+              <motion.div
+                whileHover={{ rotate: 10, scale: 1.1 }}
+                transition={{ type: "spring", stiffness: 400, damping: 10 }}
+              >
+                <Image 
+                  src="/images/captionator-logo.ico" 
+                  alt="Captionator Logo" 
+                  width={40} 
+                  height={40} 
+                />
+              </motion.div>
+              <h3 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-500 dark:from-blue-400 dark:to-purple-400">
+                Captionator
+              </h3>
+            </div>
+            <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md">
               Generate engaging, context-aware captions for any social media platform with AI. Upload your images and get captions that match your style and tone.
             </p>
             <div className="flex space-x-4">
-              <a
+              <motion.a
                 href="https://github.com/pc9350"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+                className="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors duration-300"
                 aria-label="GitHub"
+                whileHover={{ scale: 1.2, rotate: 10 }}
+                whileTap={{ scale: 0.9 }}
               >
                 <FiGithub className="w-5 h-5" />
-              </a>
-              <a
+              </motion.a>
+              <motion.a
                 href="https://pranavchhabra.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+                className="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors duration-300"
                 aria-label="Personal Website"
+                whileHover={{ scale: 1.2, rotate: 10 }}
+                whileTap={{ scale: 0.9 }}
               >
                 <FiGlobe className="w-5 h-5" />
-              </a>
+              </motion.a>
             </div>
           </div>
 
@@ -39,37 +61,15 @@ export default function Footer() {
             <h4 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-4">
               Features
             </h4>
-            <ul className="space-y-2">
+            <ul className="space-y-3">
               <li>
-                <Link
-                  href="/dashboard"
-                  className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
-                >
-                  Caption Generation
+                <Link href="/dashboard" className="text-gray-600 hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400 transition-colors duration-200">
+                  Caption Generator
                 </Link>
               </li>
               <li>
-                <Link
-                  href="/dashboard"
-                  className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
-                >
-                  Hashtag Suggestions
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/dashboard"
-                  className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
-                >
-                  Tone Customization
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/dashboard"
-                  className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
-                >
-                  Emoji Suggestions
+                <Link href="/saved" className="text-gray-600 hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400 transition-colors duration-200">
+                  Saved Captions
                 </Link>
               </li>
             </ul>
@@ -77,51 +77,31 @@ export default function Footer() {
 
           <div>
             <h4 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-4">
-              Company
+              Resources
             </h4>
-            <ul className="space-y-2">
+            <ul className="space-y-3">
               <li>
-                <Link
-                  href="/about"
-                  className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
-                >
-                  About Us
-                </Link>
+                <a href="https://openai.com" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400 transition-colors duration-200">
+                  OpenAI
+                </a>
               </li>
               <li>
-                <Link
-                  href="/privacy"
-                  className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
-                >
-                  Privacy Policy
-                </Link>
+                <a href="https://nextjs.org" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400 transition-colors duration-200">
+                  Next.js
+                </a>
               </li>
               <li>
-                <Link
-                  href="/terms"
-                  className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
-                >
-                  Terms of Service
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/contact"
-                  className="text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
-                >
-                  Contact Us
-                </Link>
+                <a href="https://firebase.google.com" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400 transition-colors duration-200">
+                  Firebase
+                </a>
               </li>
             </ul>
           </div>
         </div>
 
-        <div className="mt-12 pt-8 border-t border-gray-200 dark:border-gray-800">
-          <p className="text-gray-500 dark:text-gray-400 text-center flex items-center justify-center">
+        <div className="border-t border-gray-200 dark:border-gray-800 mt-10 pt-8">
+          <p className="text-gray-500 dark:text-gray-400 text-sm text-center">
             &copy; {new Date().getFullYear()} Captionator. All rights reserved.
-            <span className="inline-flex items-center ml-1">
-              Made with <FiHeart className="w-4 h-4 mx-1 text-red-500" /> by Pranav Chhabra
-            </span>
           </p>
         </div>
       </div>

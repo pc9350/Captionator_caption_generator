@@ -38,15 +38,6 @@ export interface User {
   email: string;
   name?: string;
   savedCaptions?: Caption[];
-  captionHistory?: CaptionHistory[];
-}
-
-export interface CaptionHistory {
-  id: string;
-  userId: string;
-  imageUrl: string;
-  captions: Caption[];
-  createdAt: Date;
 }
 
 export interface ImageAnalysisResult {

@@ -12,10 +12,11 @@ import {
   DocumentData,
   Timestamp,
   serverTimestamp,
-  FirestoreError
+  FirestoreError,
+  Firestore
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
-import { Caption, CaptionHistory } from '../types';
+import { Caption } from '../types';
 
 // Maximum number of retry attempts for Firestore operations
 const MAX_RETRIES = 3;
@@ -72,31 +73,21 @@ export const captionFromFirestore = (
   };
 };
 
-// Convert Firestore document to CaptionHistory object
-export const captionHistoryFromFirestore = (
-  doc: QueryDocumentSnapshot<DocumentData>
-): CaptionHistory => {
-  const data = doc.data();
-  return {
-    id: doc.id,
-    userId: data.userId,
-    imageUrl: data.imageUrl,
-    captions: data.captions || [],
-    createdAt: data.createdAt?.toDate() || new Date(),
-  };
-};
-
 // Save a single caption to user's saved captions
 export const saveCaption = async (userId: string, caption: Caption) => {
   return withRetry(async () => {
     try {
+      if (!db) {
+        throw new Error('Firestore is not initialized');
+      }
+      
       const captionWithTimestamp = {
         ...caption,
         userId,
         createdAt: serverTimestamp(),
       };
       
-      const docRef = await addDoc(collection(db, 'savedCaptions'), captionWithTimestamp);
+      const docRef = await addDoc(collection(db as Firestore, 'savedCaptions'), captionWithTimestamp);
       return { ...caption, id: docRef.id, userId };
     } catch (error) {
       console.error('Error saving caption:', error);
@@ -109,7 +100,11 @@ export const saveCaption = async (userId: string, caption: Caption) => {
 export const deleteCaption = async (captionId: string) => {
   return withRetry(async () => {
     try {
-      await deleteDoc(doc(db, 'savedCaptions', captionId));
+      if (!db) {
+        throw new Error('Firestore is not initialized');
+      }
+      
+      await deleteDoc(doc(db as Firestore, 'savedCaptions', captionId));
       return true;
     } catch (error) {
       console.error('Error deleting caption:', error);
@@ -122,8 +117,12 @@ export const deleteCaption = async (captionId: string) => {
 export const getSavedCaptions = async (userId: string): Promise<Caption[]> => {
   return withRetry(async () => {
     try {
+      if (!db) {
+        throw new Error('Firestore is not initialized');
+      }
+      
       const q = query(
-        collection(db, 'savedCaptions'),
+        collection(db as Firestore, 'savedCaptions'),
         where('userId', '==', userId),
         orderBy('createdAt', 'desc')
       );
@@ -132,49 +131,6 @@ export const getSavedCaptions = async (userId: string): Promise<Caption[]> => {
       return querySnapshot.docs.map(captionFromFirestore);
     } catch (error) {
       console.error('Error getting saved captions:', error);
-      throw error;
-    }
-  });
-};
-
-// Save caption generation history
-export const saveCaptionGenerationHistory = async (
-  userId: string,
-  imageUrl: string,
-  captions: Caption[]
-) => {
-  return withRetry(async () => {
-    try {
-      const historyData = {
-        userId,
-        imageUrl,
-        captions,
-        createdAt: serverTimestamp(),
-      };
-      
-      const docRef = await addDoc(collection(db, 'captionHistory'), historyData);
-      return { id: docRef.id, ...historyData };
-    } catch (error) {
-      console.error('Error saving caption history:', error);
-      throw error;
-    }
-  });
-};
-
-// Get caption generation history for a user
-export const getCaptionHistory = async (userId: string): Promise<CaptionHistory[]> => {
-  return withRetry(async () => {
-    try {
-      const q = query(
-        collection(db, 'captionHistory'),
-        where('userId', '==', userId),
-        orderBy('createdAt', 'desc')
-      );
-      
-      const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(captionHistoryFromFirestore);
-    } catch (error) {
-      console.error('Error getting caption history:', error);
       throw error;
     }
   });

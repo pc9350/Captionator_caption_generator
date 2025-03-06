@@ -1,16 +1,38 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { UserButton, useUser } from '@clerk/nextjs';
-import { FiMenu, FiX, FiHome, FiBookmark, FiClock, FiLogIn } from 'react-icons/fi';
+import { usePathname, useRouter } from 'next/navigation';
+import { FiMenu, FiX, FiHome, FiBookmark, FiLogIn, FiLogOut, FiUser } from 'react-icons/fi';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '@/app/context/AuthContext';
+import Image from 'next/image';
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
-  const { isSignedIn } = useUser();
+  const { user, logOut } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    setMounted(true);
+    
+    const handleScroll = () => {
+      const offset = window.scrollY;
+      if (offset > 50) {
+        setScrolled(true);
+      } else {
+        setScrolled(false);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -20,9 +42,18 @@ export default function Navbar() {
     setIsMenuOpen(false);
   };
 
+  const handleSignOut = async () => {
+    try {
+      await logOut();
+      router.push('/');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
   const navLinks = [
     {
-      name: 'Home',
+      name: 'Generator',
       href: '/dashboard',
       icon: <FiHome className="w-5 h-5" />,
     },
@@ -32,68 +63,174 @@ export default function Navbar() {
       icon: <FiBookmark className="w-5 h-5" />,
       requireAuth: true,
     },
-    {
-      name: 'History',
-      href: '/history',
-      icon: <FiClock className="w-5 h-5" />,
-      requireAuth: true,
-    },
   ];
 
+  // Only show client-side content after mounting to prevent hydration errors
+  if (!mounted) {
+    return (
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-transparent">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-16">
+            <div className="flex items-center">
+              <Link href="/" className="flex-shrink-0 flex items-center">
+                <Image 
+                  src="/images/captionator-logo.ico" 
+                  alt="Captionator Logo" 
+                  width={36} 
+                  height={36} 
+                  className="mr-2"
+                />
+                <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-500 dark:from-blue-400 dark:to-purple-400">
+                  Captionator
+                </span>
+              </Link>
+            </div>
+            <div className="flex md:hidden items-center">
+              <div className="w-10 h-10"></div>
+            </div>
+          </div>
+        </div>
+      </nav>
+    );
+  }
+
   const filteredLinks = navLinks.filter(
-    (link) => !link.requireAuth || (link.requireAuth && isSignedIn)
+    (link) => !link.requireAuth || (link.requireAuth && user)
   );
 
   return (
-    <nav className="bg-white dark:bg-gray-800 shadow-md">
+    <motion.nav 
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        scrolled 
+          ? 'backdrop-blur-md bg-white/10 dark:bg-gray-900/70 shadow-lg' 
+          : 'bg-transparent'
+      }`}
+      initial={{ y: -100 }}
+      animate={{ y: 0 }}
+      transition={{ duration: 0.5 }}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
-          <div className="flex items-center">
+        <div className="flex justify-between h-20">
+          <motion.div 
+            className="flex items-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
             <Link href="/" className="flex-shrink-0 flex items-center">
-              <span className="text-xl font-bold text-blue-600 dark:text-blue-400">
+              <motion.div
+                whileHover={{ rotate: 10, scale: 1.1 }}
+                transition={{ type: "spring", stiffness: 400, damping: 10 }}
+              >
+                <Image 
+                  src="/images/captionator-logo.ico" 
+                  alt="Captionator Logo" 
+                  width={40} 
+                  height={40} 
+                  className="mr-3"
+                />
+              </motion.div>
+              <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-500 dark:from-blue-400 dark:to-purple-400">
                 Captionator
               </span>
             </Link>
-          </div>
+          </motion.div>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex md:items-center md:space-x-4">
-            {filteredLinks.map((link) => (
-              <Link
+          <div className="hidden md:flex md:items-center md:space-x-6">
+            {filteredLinks.map((link, index) => (
+              <motion.div
                 key={link.name}
-                href={link.href}
-                className={`px-3 py-2 rounded-md text-sm font-medium flex items-center space-x-1 ${
-                  pathname === link.href
-                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200'
-                    : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
-                }`}
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.1 * (index + 1) }}
               >
-                {link.icon}
-                <span>{link.name}</span>
-              </Link>
+                <Link
+                  href={link.href}
+                  className={`px-4 py-2 rounded-full text-sm font-medium flex items-center space-x-2 transition-all duration-300 ${
+                    pathname === link.href
+                      ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg shadow-blue-500/20 dark:shadow-purple-500/20'
+                      : 'text-gray-700 dark:text-gray-200 hover:bg-white/20 dark:hover:bg-gray-800/50 backdrop-blur-sm hover:shadow-md'
+                  }`}
+                >
+                  <motion.div
+                    whileHover={{ rotate: 15 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 10 }}
+                  >
+                    {link.icon}
+                  </motion.div>
+                  <span>{link.name}</span>
+                </Link>
+              </motion.div>
             ))}
 
-            <div className="ml-4 flex items-center">
-              {isSignedIn ? (
-                <UserButton afterSignOutUrl="/" />
+            <motion.div 
+              className="ml-4 flex items-center"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3, delay: 0.4 }}
+            >
+              {user ? (
+                <div className="relative group">
+                  <motion.button 
+                    className="flex items-center space-x-2 focus:outline-none"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center overflow-hidden border-2 border-white border-opacity-50 hover:border-opacity-100 transition-all duration-300 shadow-md">
+                      {user.photoURL ? (
+                        <Image 
+                          src={user.photoURL} 
+                          alt={user.displayName || 'User'} 
+                          width={40} 
+                          height={40} 
+                          className="rounded-full"
+                        />
+                      ) : (
+                        <FiUser className="w-5 h-5 text-white" />
+                      )}
+                    </div>
+                  </motion.button>
+                  <motion.div 
+                    className="absolute right-0 mt-2 w-48 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-xl shadow-xl py-2 z-10 hidden group-hover:block transform origin-top-right transition-all duration-200 border border-gray-100 dark:border-gray-700"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <button
+                      onClick={handleSignOut}
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center transition-colors duration-200"
+                    >
+                      <FiLogOut className="mr-2" />
+                      Sign out
+                    </button>
+                  </motion.div>
+                </div>
               ) : (
-                <Link
-                  href="/sign-in"
-                  className="px-4 py-2 rounded-md text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 flex items-center space-x-1"
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                 >
-                  <FiLogIn className="w-4 h-4" />
-                  <span>Sign In</span>
-                </Link>
+                  <Link
+                    href="/sign-in"
+                    className="px-5 py-2.5 rounded-full text-sm font-medium bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:shadow-lg hover:shadow-blue-500/30 dark:hover:shadow-purple-500/30 flex items-center space-x-2 transition-all duration-300"
+                  >
+                    <FiLogIn className="w-4 h-4" />
+                    <span>Sign In</span>
+                  </Link>
+                </motion.div>
               )}
-            </div>
+            </motion.div>
           </div>
 
           {/* Mobile menu button */}
           <div className="flex md:hidden items-center">
-            <button
+            <motion.button
               onClick={toggleMenu}
-              className="inline-flex items-center justify-center p-2 rounded-md text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none"
+              className="inline-flex items-center justify-center p-2 rounded-full text-gray-700 dark:text-white hover:bg-white/20 dark:hover:bg-gray-800/50 focus:outline-none transition-all duration-300"
               aria-expanded="false"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
             >
               <span className="sr-only">Open main menu</span>
               {isMenuOpen ? (
@@ -101,7 +238,7 @@ export default function Navbar() {
               ) : (
                 <FiMenu className="block h-6 w-6" />
               )}
-            </button>
+            </motion.button>
           </div>
         </div>
       </div>
@@ -110,43 +247,72 @@ export default function Navbar() {
       <AnimatePresence>
         {isMenuOpen && (
           <motion.div
-            className="md:hidden"
+            className="md:hidden backdrop-blur-xl bg-white/20 dark:bg-gray-900/90 border-b border-gray-200 dark:border-gray-800"
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.3 }}
           >
-            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-              {filteredLinks.map((link) => (
-                <Link
+            <div className="px-4 pt-4 pb-6 space-y-3">
+              {filteredLinks.map((link, index) => (
+                <motion.div
                   key={link.name}
-                  href={link.href}
-                  className={`block px-3 py-2 rounded-md text-base font-medium flex items-center space-x-2 ${
-                    pathname === link.href
-                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200'
-                      : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
-                  }`}
-                  onClick={closeMenu}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.2, delay: 0.05 * index }}
                 >
-                  {link.icon}
-                  <span>{link.name}</span>
-                </Link>
+                  <Link
+                    href={link.href}
+                    className={`block px-4 py-3 rounded-lg text-base font-medium flex items-center space-x-3 transition-all duration-300 ${
+                      pathname === link.href
+                        ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-md'
+                        : 'text-gray-700 dark:text-gray-200 hover:bg-white/20 dark:hover:bg-gray-800/50'
+                    }`}
+                    onClick={closeMenu}
+                  >
+                    {link.icon}
+                    <span>{link.name}</span>
+                  </Link>
+                </motion.div>
               ))}
 
-              {!isSignedIn && (
-                <Link
-                  href="/sign-in"
-                  className="block px-3 py-2 rounded-md text-base font-medium bg-blue-600 text-white hover:bg-blue-700 flex items-center space-x-2 mt-4"
-                  onClick={closeMenu}
+              {user ? (
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.2, delay: 0.2 }}
                 >
-                  <FiLogIn className="w-5 h-5" />
-                  <span>Sign In</span>
-                </Link>
+                  <button
+                    onClick={() => {
+                      handleSignOut();
+                      closeMenu();
+                    }}
+                    className="block w-full px-4 py-3 rounded-lg text-base font-medium bg-gradient-to-r from-red-500 to-pink-500 text-white flex items-center space-x-3 mt-4 transition-all duration-300 shadow-md"
+                  >
+                    <FiLogOut className="w-5 h-5" />
+                    <span>Sign Out</span>
+                  </button>
+                </motion.div>
+              ) : (
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.2, delay: 0.2 }}
+                >
+                  <Link
+                    href="/sign-in"
+                    className="block px-4 py-3 rounded-lg text-base font-medium bg-gradient-to-r from-blue-500 to-purple-500 text-white flex items-center space-x-3 mt-4 transition-all duration-300 shadow-md"
+                    onClick={closeMenu}
+                  >
+                    <FiLogIn className="w-5 h-5" />
+                    <span>Sign In</span>
+                  </Link>
+                </motion.div>
               )}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-    </nav>
+    </motion.nav>
   );
 } 

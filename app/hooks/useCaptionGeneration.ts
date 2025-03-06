@@ -2,20 +2,23 @@
 
 import { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { useUser } from '@clerk/nextjs';
+import { useAuth } from '../context/AuthContext';
 import { Caption } from '../types';
 import { useFirebaseIntegration } from './useFirebaseIntegration';
 import { useCaptionStore } from '../store/captionStore';
 
+// Define ApiError type for error handling
 interface ApiError {
   message: string;
-  status?: number;
+  [key: string]: any;
 }
 
 export const useCaptionGeneration = () => {
+  const { user } = useAuth();
+  const isSignedIn = !!user;
   const [error, setError] = useState<string | null>(null);
-  const { isSignedIn, user } = useUser();
-  const { saveCaptionHistory } = useFirebaseIntegration();
+  
+  // Use the caption store for state management
   const { 
     imageUrl, 
     uploadedImages, 
@@ -27,18 +30,6 @@ export const useCaptionGeneration = () => {
     includeEmojis
   } = useCaptionStore();
 
-  // Function to safely save caption history to Firebase
-  const safelySaveCaptionHistory = async (imageUrl: string, captions: Caption[]) => {
-    if (!isSignedIn || !user) return;
-    
-    try {
-      await saveCaptionHistory(imageUrl, captions);
-    } catch (err) {
-      console.warn('Failed to save caption history to Firebase, but continuing with caption generation:', err);
-      // Don't throw the error - just log it and continue
-    }
-  };
-
   const generateCaptions = async (tone: string) => {
     // Check if there are any uploaded images
     if (!uploadedImages || uploadedImages.length === 0) {
@@ -47,22 +38,13 @@ export const useCaptionGeneration = () => {
     }
 
     console.log('Generating captions with tone:', tone);
-    console.log('Using images:', uploadedImages.length);
-    console.log('Include hashtags:', includeHashtags);
-    console.log('Include emojis:', includeEmojis);
-
+    
     try {
       setIsGenerating(true);
       setError(null);
 
       // Get all base64 image data from uploaded images
       const imageData = uploadedImages.map(img => img.base64);
-
-      // Validate image data
-      if (imageData.some(data => !data || !data.startsWith('data:image/'))) {
-        setError('One or more images are in an invalid format. Please try uploading them again.');
-        return [];
-      }
 
       const response = await fetch('/api/generate-caption', {
         method: 'POST',
@@ -80,20 +62,17 @@ export const useCaptionGeneration = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to generate captions');
+        throw new Error(data.error || 'Failed to generate caption');
       }
 
-      console.log('Generated captions data:', data);
-      
       // Check if we have valid captions
       if (!data.captions || !Array.isArray(data.captions) || data.captions.length === 0) {
-        throw new Error('No captions were generated. Please try again with different images.');
+        throw new Error('No captions were generated. Please try again.');
       }
-      
-      // Transform the response into Caption objects with unique IDs
+
+      // Map the API response to our Caption type
       const newCaptions = data.captions.map((captionData: any) => {
-        // Check for both possible field names (text or caption)
-        const captionText = captionData.caption || captionData.text || 'No caption text provided';
+        const captionText = captionData.text || 'No caption text provided';
         
         // Ensure hashtags and emojis are arrays of strings
         const hashtags = Array.isArray(captionData.hashtags) 
@@ -115,14 +94,8 @@ export const useCaptionGeneration = () => {
 
       setGeneratedCaptions(newCaptions);
       
-      // Try to save caption history to Firebase, but don't block on it
-      if (isSignedIn && user && imageUrl) {
-        // Use a separate function that won't throw errors
-        safelySaveCaptionHistory(imageUrl, newCaptions).catch(err => {
-          console.warn('Error in background Firebase save:', err);
-        });
-      }
-
+      // History saving functionality removed
+      
       return newCaptions;
     } catch (error: unknown) {
       const apiError = error as ApiError;

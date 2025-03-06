@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FiCopy, FiRefreshCw, FiSave, FiTrash2 } from 'react-icons/fi';
+import { FiCopy, FiRefreshCw, FiSave, FiTrash2, FiCheck, FiTag } from 'react-icons/fi';
 import { useCaptionGeneration } from '../hooks/useCaptionGeneration';
 import { useCaptionStore } from '../store/captionStore';
 import { Caption } from '../types';
@@ -38,9 +38,11 @@ export default function CaptionCard({ caption, index, isSavedCaption = false }: 
     try {
       await navigator.clipboard.writeText(caption.text);
       setCopied(true);
+      toast.success('Caption copied to clipboard');
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy text: ', err);
+      toast.error('Failed to copy text');
     }
   };
 
@@ -128,7 +130,7 @@ export default function CaptionCard({ caption, index, isSavedCaption = false }: 
   return (
     <>
       <motion.div
-        className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden"
+        className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden border border-gray-100 dark:border-gray-700 hover:shadow-xl transition-shadow duration-300"
         variants={cardVariants}
         initial="hidden"
         animate="visible"
@@ -137,13 +139,16 @@ export default function CaptionCard({ caption, index, isSavedCaption = false }: 
       >
         <div className="p-6">
           <div className="flex items-center justify-between mb-4">
-            <span className="px-3 py-1 text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-100">
-              {caption.category}
-            </span>
+            <div className="flex items-center">
+              <FiTag className="w-4 h-4 text-blue-500 dark:text-blue-400 mr-2" />
+              <span className="px-3 py-1 text-xs font-medium rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white">
+                {caption.category}
+              </span>
+            </div>
             <div className="flex space-x-2">
               {isSavedCaption ? (
                 <motion.button
-                  className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                  className="w-9 h-9 flex items-center justify-center rounded-full bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors duration-200"
                   variants={buttonVariants}
                   whileHover="hover"
                   whileTap="tap"
@@ -151,24 +156,28 @@ export default function CaptionCard({ caption, index, isSavedCaption = false }: 
                   disabled={isDeleting}
                   aria-label="Delete caption"
                 >
-                  <FiTrash2 className={isDeleting ? 'text-red-500' : ''} />
+                  <FiTrash2 className={`w-4 h-4 ${isDeleting ? 'animate-pulse' : ''}`} />
                 </motion.button>
               ) : (
                 <motion.button
-                  className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                  className={`w-9 h-9 flex items-center justify-center rounded-full ${
+                    isSaved 
+                      ? 'bg-green-50 dark:bg-green-900/20 text-green-500 dark:text-green-400' 
+                      : 'bg-blue-50 dark:bg-blue-900/20 text-blue-500 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30'
+                  } transition-colors duration-200`}
                   variants={buttonVariants}
                   whileHover="hover"
                   whileTap="tap"
                   onClick={handleSave}
                   aria-label="Save caption"
                 >
-                  {isSaved ? <FiSave className="text-green-500" /> : <FiSave />}
+                  {isSaved ? <FiCheck className="w-4 h-4" /> : <FiSave className="w-4 h-4" />}
                 </motion.button>
               )}
               
               {!isSavedCaption && (
                 <motion.button
-                  className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                  className="w-9 h-9 flex items-center justify-center rounded-full bg-purple-50 dark:bg-purple-900/20 text-purple-500 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors duration-200"
                   variants={buttonVariants}
                   whileHover="hover"
                   whileTap="tap"
@@ -181,36 +190,40 @@ export default function CaptionCard({ caption, index, isSavedCaption = false }: 
                   }}
                   onMouseLeave={() => setTooltipVisible(false)}
                 >
-                  <FiRefreshCw className={isRegenerating ? 'animate-spin' : ''} />
+                  <FiRefreshCw className={`w-4 h-4 ${isRegenerating ? 'animate-spin' : ''}`} />
                 </motion.button>
               )}
               
               <motion.button
-                className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                className={`w-9 h-9 flex items-center justify-center rounded-full ${
+                  copied 
+                    ? 'bg-green-50 dark:bg-green-900/20 text-green-500 dark:text-green-400' 
+                    : 'bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'
+                } transition-colors duration-200`}
                 variants={buttonVariants}
                 whileHover="hover"
                 whileTap="tap"
                 onClick={handleCopy}
                 aria-label="Copy caption"
               >
-                {copied ? <FiSave className="text-green-500" /> : <FiCopy />}
+                {copied ? <FiCheck className="w-4 h-4" /> : <FiCopy className="w-4 h-4" />}
               </motion.button>
             </div>
           </div>
           
-          <div className="mb-4">
+          <div className="mb-4 bg-gray-50 dark:bg-gray-700/30 p-4 rounded-lg">
             <p className="text-gray-800 dark:text-gray-200 leading-relaxed">
               {caption.text}
             </p>
           </div>
           
           {hashtags.length > 0 && (
-            <div className="mb-3">
+            <div className="mb-1">
               <div className="flex flex-wrap gap-2">
                 {hashtags.map((hashtag, idx) => (
                   <span 
                     key={idx} 
-                    className="text-sm text-blue-600 dark:text-blue-400"
+                    className="text-sm text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-md"
                   >
                     #{hashtag.replace(/^#/, '')}
                   </span>
@@ -231,7 +244,7 @@ export default function CaptionCard({ caption, index, isSavedCaption = false }: 
       
       {/* Notification toast */}
       {showNotification && (
-        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center z-50">
+        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-lg shadow-xl flex items-center z-50 animate-pulse">
           <FiSave className="mr-2" />
           <span>New caption added at the bottom</span>
         </div>

@@ -1,20 +1,23 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { useUser } from '@clerk/nextjs';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '@/app/context/AuthContext';
 import { useCaptionStore } from '@/app/store/captionStore';
 import CaptionCard from '@/app/components/CaptionCard';
-import { FiSearch, FiAlertCircle } from 'react-icons/fi';
+import { FiSearch, FiAlertCircle, FiBookmark, FiFilter } from 'react-icons/fi';
 import { useFirebaseIntegration } from '@/app/hooks/useFirebaseIntegration';
 
 export default function SavedCaptions() {
-  const { isSignedIn, isLoaded } = useUser();
+  const { user, loading } = useAuth();
+  const isSignedIn = !!user;
+  const isLoaded = !loading;
   const { savedCaptions, setGeneratedCaptions } = useCaptionStore();
   const { isLoading: isFirebaseLoading, getSavedCaptions } = useFirebaseIntegration();
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredCaptions, setFilteredCaptions] = useState(savedCaptions);
   const [isLoadingCaptions, setIsLoadingCaptions] = useState(true);
+  const [activeFilter, setActiveFilter] = useState('all');
 
   // Fetch saved captions when the component mounts
   useEffect(() => {
@@ -42,40 +45,59 @@ export default function SavedCaptions() {
     }
   }, [isSignedIn, isLoaded, getSavedCaptions, setGeneratedCaptions]);
 
-  // Filter captions based on search term
+  // Filter captions based on search term and active filter
   useEffect(() => {
-    if (searchTerm.trim() === '') {
-      setFilteredCaptions(savedCaptions);
-    } else {
-      const lowercasedSearch = searchTerm.toLowerCase();
-      setFilteredCaptions(
-        savedCaptions.filter(
-          (caption) =>
-            caption.text.toLowerCase().includes(lowercasedSearch) ||
-            caption.category.toLowerCase().includes(lowercasedSearch) ||
-            (caption.hashtags &&
-              caption.hashtags.some((tag) =>
-                typeof tag === 'string' && tag.toLowerCase().includes(lowercasedSearch)
-              ))
-        )
+    let filtered = savedCaptions;
+    
+    // Apply category filter if not 'all'
+    if (activeFilter !== 'all') {
+      filtered = filtered.filter(caption => 
+        caption.category.toLowerCase() === activeFilter.toLowerCase()
       );
     }
-  }, [searchTerm, savedCaptions]);
+    
+    // Apply search term filter
+    if (searchTerm.trim() !== '') {
+      const lowercasedSearch = searchTerm.toLowerCase();
+      filtered = filtered.filter(
+        (caption) =>
+          caption.text.toLowerCase().includes(lowercasedSearch) ||
+          caption.category.toLowerCase().includes(lowercasedSearch) ||
+          (caption.hashtags &&
+            caption.hashtags.some((tag) =>
+              typeof tag === 'string' && tag.toLowerCase().includes(lowercasedSearch)
+            ))
+      );
+    }
+    
+    setFilteredCaptions(filtered);
+  }, [searchTerm, savedCaptions, activeFilter]);
+
+  // Get unique categories for filter
+  const categories = ['all', ...new Set(savedCaptions.map(caption => caption.category.toLowerCase()))];
 
   if (!isLoaded || isFirebaseLoading || isLoadingCaptions) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-indigo-950 py-12 flex items-center justify-center pt-28">
+        <div className="flex flex-col items-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+          <p className="mt-4 text-blue-600 dark:text-blue-400 font-medium">Loading your captions...</p>
+        </div>
       </div>
     );
   }
 
   if (!isSignedIn) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12">
+      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-indigo-950 pt-28 pb-12">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-4xl mx-auto text-center">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden p-8">
+            <motion.div 
+              className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden p-8 backdrop-blur-sm bg-opacity-80 dark:bg-opacity-80"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
               <FiAlertCircle className="w-16 h-16 text-blue-500 mx-auto mb-6" />
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
                 Sign In Required
@@ -89,7 +111,7 @@ export default function SavedCaptions() {
               >
                 Sign In
               </button>
-            </div>
+            </motion.div>
           </div>
         </div>
       </div>
@@ -97,16 +119,19 @@ export default function SavedCaptions() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12">
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-indigo-950 pt-28 pb-12">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <motion.div
             className="mb-8 text-center"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            <div className="inline-block p-2 bg-blue-100 dark:bg-blue-900 rounded-full mb-4">
+              <FiBookmark className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            </div>
+            <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-3 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
               Your Saved Captions
             </h1>
             <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
@@ -114,58 +139,107 @@ export default function SavedCaptions() {
             </p>
           </motion.div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden mb-12">
+          <motion.div 
+            className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden mb-12 backdrop-blur-sm bg-opacity-90 dark:bg-opacity-80"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+          >
             <div className="p-6 sm:p-10">
-              <div className="relative mb-8">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <FiSearch className="h-5 w-5 text-gray-400" />
+              <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 mb-8">
+                <div className="relative flex-grow md:mr-4">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <FiSearch className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    type="text"
+                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                    placeholder="Search captions, hashtags, or categories..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
                 </div>
-                <input
-                  type="text"
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Search captions, hashtags, or categories..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+                
+                <div className="relative">
+                  <div className="flex items-center overflow-x-auto pb-1 scrollbar-hide">
+                    <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg p-1.5 shadow-sm">
+                      <div className="flex items-center space-x-1">
+                        <FiFilter className="h-4 w-4 text-gray-500 dark:text-gray-400 ml-2 mr-1" />
+                        {categories.map((category) => (
+                          <motion.button
+                            key={category}
+                            onClick={() => setActiveFilter(category)}
+                            className={`px-3 py-1.5 text-sm rounded-md whitespace-nowrap transition-all duration-200 ${
+                              activeFilter === category
+                                ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-sm'
+                                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                            }`}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                          >
+                            {category === 'all' ? 'All' : category.charAt(0).toUpperCase() + category.slice(1)}
+                          </motion.button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              {filteredCaptions.length > 0 ? (
-                <motion.div
-                  className="grid grid-cols-1 md:grid-cols-2 gap-6"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.5 }}
-                >
-                  {filteredCaptions.map((caption, index) => (
-                    <CaptionCard 
-                      key={caption.id || index} 
-                      caption={caption} 
-                      index={index} 
-                      isSavedCaption={true} 
-                    />
-                  ))}
-                </motion.div>
-              ) : (
-                <div className="text-center py-12">
-                  <FiAlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                    No saved captions found
-                  </h3>
-                  <p className="text-gray-500 dark:text-gray-400 mb-6">
-                    {searchTerm
-                      ? "No captions match your search criteria."
-                      : "You haven't saved any captions yet. Generate some captions and save them to see them here."}
-                  </p>
-                  <button
-                    onClick={() => window.location.href = '/'}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+              <AnimatePresence mode="wait">
+                {filteredCaptions.length > 0 ? (
+                  <motion.div
+                    key="caption-grid"
+                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3 }}
                   >
-                    Generate Captions
-                  </button>
-                </div>
-              )}
+                    {filteredCaptions.map((caption, index) => (
+                      <motion.div
+                        key={caption.id || index}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.3, delay: index * 0.05 }}
+                      >
+                        <CaptionCard 
+                          caption={caption} 
+                          index={index} 
+                          isSavedCaption={true} 
+                        />
+                      </motion.div>
+                    ))}
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="no-captions"
+                    className="text-center py-12"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <FiAlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                      No saved captions found
+                    </h3>
+                    <p className="text-gray-500 dark:text-gray-400 mb-6">
+                      {searchTerm || activeFilter !== 'all'
+                        ? "No captions match your search criteria."
+                        : "You haven't saved any captions yet. Generate some captions and save them to see them here."}
+                    </p>
+                    <button
+                      onClick={() => window.location.href = '/dashboard'}
+                      className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-medium rounded-lg shadow-lg hover:shadow-xl transition-all duration-200"
+                    >
+                      Generate Captions
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
     </div>

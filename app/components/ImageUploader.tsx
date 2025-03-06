@@ -64,7 +64,8 @@ export default function ImageUploader() {
 
   // Update the image validity check
   const checkImageValidity = useCallback(async () => {
-    console.log("Checking validity of", uploadedImages.length, "images");
+    // Remove or comment out console logs
+    // console.log("Checking validity of", uploadedImages.length, "images");
 
     const validityMap: Record<number, boolean> = {};
 
@@ -74,7 +75,8 @@ export default function ImageUploader() {
         const testImg = document.createElement('img');
         const isValid = await new Promise<boolean>((resolve) => {
           testImg.onload = () => {
-            console.log(`Image ${i} is valid:`, img.url.substring(0, 30) + "...");
+            // Remove or comment out console logs
+            // console.log(`Image ${i} is valid:`, img.url.substring(0, 30) + "...");
             resolve(true);
           };
           testImg.onerror = () => {
@@ -92,22 +94,30 @@ export default function ImageUploader() {
     }
 
     setImageValidityMap(validityMap);
-    console.log("Image validity map:", validityMap);
+    // Remove or comment out console logs
+    // console.log("Image validity map:", validityMap);
 
     // If we find any invalid images, try to validate/fix blob URLs
     const hasInvalidImages = Object.values(validityMap).some((valid) => !valid);
     if (hasInvalidImages && !isValidatingUrls) {
-      console.log("Found invalid images, attempting to fix blob URLs");
+      // Remove or comment out console logs
+      // console.log("Found invalid images, attempting to fix blob URLs");
       handleValidateBlobUrls();
     }
   }, [uploadedImages, isValidatingUrls, handleValidateBlobUrls]);
 
   // Validate image URLs whenever uploadedImages change
   useEffect(() => {
-    if (uploadedImages.length > 0) {
-      checkImageValidity();
+    // Add a check to prevent unnecessary validations
+    if (uploadedImages.length > 0 && !isValidatingUrls) {
+      // Use a ref to track if this is the initial validation
+      const timeoutId = setTimeout(() => {
+        checkImageValidity();
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
     }
-  }, [uploadedImages, checkImageValidity]);
+  }, [uploadedImages.length, checkImageValidity, isValidatingUrls]);
 
   // Utility function to convert a blob URL to a data URL
   const blobToDataUrl = async (blobUrl: string): Promise<string> => {
@@ -546,8 +556,8 @@ export default function ImageUploader() {
                                 console.error('Image failed to load:', e);
                                 e.currentTarget.src = '/fallback.svg';
                               }}
-                            />
-                          </div>
+                />
+              </div>
                         </div>
                       );
                     })}

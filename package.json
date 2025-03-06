@@ -7,14 +7,14 @@
     "build": "next build",
     "build:dev": "cross-env NODE_ENV=development next build",
     "start": "next start",
-    "lint": "next lint",
-    "toggle-diagnostics": "node scripts/toggle-diagnostics.js"
+    "lint": "next lint"
   },
   "dependencies": {
-    "@clerk/nextjs": "^6.12.3",
     "@headlessui/react": "^2.2.0",
+    "@types/js-cookie": "^3.0.6",
     "firebase": "^11.4.0",
     "framer-motion": "^12.4.10",
+    "js-cookie": "^3.0.5",
     "lottie-react": "^2.4.1",
     "next": "^15.2.1",
     "nodemailer": "^6.10.0",
