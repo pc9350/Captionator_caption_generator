@@ -140,8 +140,8 @@ export async function POST(req: NextRequest) {
     } else if (captionLength === 'micro') {
       lengthInstructions = 'Create ultra-short captions of just 1-5 words. These should be punchy, impactful phrases or even single words that make a statement.';
     } else {
-      // Default to medium length if not specified
-      lengthInstructions = 'Create moderately sized captions of 2-3 sentences or 25-50 words. Balance brevity with detail.';
+      // Default to micro length if not specified
+      lengthInstructions = 'Create ultra-short captions of just 1-5 words. These should be punchy, impactful phrases or even single words that make a statement.';
     }
 
     // Define spicy content instructions

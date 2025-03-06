@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import ImageUploader from '@/app/components/ImageUploader';
 import ToneSelector from '@/app/components/ToneSelector';
@@ -9,13 +9,20 @@ import GenerateButton from '@/app/components/GenerateButton';
 import CaptionResults from '@/app/components/CaptionResults';
 import { FiSettings } from 'react-icons/fi';
 import { useAuth } from '@/app/context/AuthContext';
+import { useCaptionStore } from '@/app/store/captionStore';
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const { resetCaptionLength } = useCaptionStore();
   const [selectedTone, setSelectedTone] = useState('casual');
   
   type TabType = 'tones' | 'options';
   const [activeTab, setActiveTab] = useState<TabType>('tones');
+
+  // Reset caption length to 'micro' when the component mounts
+  useEffect(() => {
+    resetCaptionLength();
+  }, [resetCaptionLength]);
 
   const handleToneChange = (tone: string) => {
     setSelectedTone(tone);

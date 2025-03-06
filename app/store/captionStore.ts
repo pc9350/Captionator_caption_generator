@@ -69,6 +69,7 @@ interface CaptionState {
   saveCaption: (caption: Caption) => void;
   removeCaption: (captionId: string) => void;
   setSavedCaptions: (captions: Caption[]) => void;
+  resetCaptionLength: () => void;
   reset: () => void;
 }
 
@@ -88,7 +89,7 @@ export const useCaptionStore = create<CaptionState>()(
       isGenerating: false,
       includeHashtags: true,
       includeEmojis: true,
-      captionLength: 'medium',
+      captionLength: 'micro',
       spicyLevel: 'none',
       captionStyle: 'none',
       creativeLanguageOptions: {
@@ -123,6 +124,7 @@ export const useCaptionStore = create<CaptionState>()(
       setCaptionStyle: (style) => set({ captionStyle: style }),
       setCreativeLanguageOptions: (options) => set({ creativeLanguageOptions: options }),
       setSavedCaptions: (captions) => set({ savedCaptions: captions }),
+      resetCaptionLength: () => set({ captionLength: 'micro' }),
       saveCaption: (caption) => 
         set((state) => {
           // Check if the caption is already in savedCaptions
@@ -155,6 +157,7 @@ export const useCaptionStore = create<CaptionState>()(
     }),
     {
       name: 'caption-storage', // name of the item in the storage (must be unique)
+      version: 1, // Increment this when you want to reset the persisted state
       partialize: (state) => ({
         savedCaptions: state.savedCaptions,
         selectedTone: state.selectedTone,
