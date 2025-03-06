@@ -1,43 +1,52 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { cookies } from 'next/headers';
 
-const TOKEN_NAME = 'firebase-auth-token';
-
-// List of routes that require authentication
-const protectedRoutes = [
-  '/dashboard',
-  '/saved',
-];
-
-// List of routes that are only accessible to non-authenticated users
-const authRoutes = [
+// Define public routes that don't require authentication
+const publicRoutes = [
+  '/',
   '/sign-in',
   '/sign-up',
+  '/auth',
+  '/reset-password',
+  '/about',
+  '/contact',
+  '/privacy',
+  '/terms',
 ];
 
+// Define auth routes that should redirect to dashboard if already authenticated
+const authRoutes = ['/sign-in', '/sign-up', '/auth', '/reset-password'];
+
 export async function middleware(request: NextRequest) {
-  const token = request.cookies.get(TOKEN_NAME)?.value;
-  const isAuthenticated = !!token;
+  const authCookie = request.cookies.get('firebase-auth-token');
   const path = request.nextUrl.pathname;
 
-  // Check if the route requires authentication
-  const isProtectedRoute = protectedRoutes.some(route => 
+  // Check if the path is a public route
+  const isPublicRoute = publicRoutes.some(route => 
     path === route || path.startsWith(`${route}/`)
   );
 
-  // Check if the route is only for non-authenticated users
+  // Check if the path is an auth route
   const isAuthRoute = authRoutes.some(route => 
     path === route || path.startsWith(`${route}/`)
   );
 
-  // Redirect authenticated users away from auth routes
-  if (isAuthenticated && isAuthRoute) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
+  // If user is authenticated and trying to access an auth route, redirect to dashboard
+  if (authCookie && isAuthRoute) {
+    return NextResponse.redirect(new URL('/dashboard/dashboard', request.url));
   }
 
-  // Redirect unauthenticated users away from protected routes
-  if (!isAuthenticated && isProtectedRoute) {
-    return NextResponse.redirect(new URL('/sign-in', request.url));
+  // If user is not authenticated and trying to access a protected route, redirect to sign in
+  if (!authCookie && !isPublicRoute) {
+    const redirectUrl = new URL('/auth', request.url);
+    redirectUrl.searchParams.set('redirect', path);
+    return NextResponse.redirect(redirectUrl);
+  }
+
+  // For the old sign-in and sign-up routes, redirect to the new auth page
+  if (path === '/sign-in' || path === '/sign-up') {
+    return NextResponse.redirect(new URL('/auth', request.url));
   }
 
   return NextResponse.next();
@@ -54,6 +63,6 @@ export const config = {
      * - favicon.ico (favicon file)
      * - public folder
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.png$).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|images).*)',
   ],
 };

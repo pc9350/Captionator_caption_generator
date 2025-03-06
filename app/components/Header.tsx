@@ -39,14 +39,14 @@ export default function Header() {
             >
               Home
             </Link>
-            <Link 
-              href="/dashboard" 
-              className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium"
+            <Link
+              href="/dashboard/dashboard"
+              className="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
             >
-              Dashboard
+              Get Started
             </Link>
-            <Link 
-              href="/saved" 
+            <Link
+              href="/dashboard/saved"
               className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium"
             >
               Saved Captions
@@ -107,15 +107,15 @@ export default function Header() {
             >
               Home
             </Link>
-            <Link 
-              href="/dashboard" 
-              className="block text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium"
+            <Link
+              href="/dashboard/dashboard"
+              className="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
               onClick={() => setIsMenuOpen(false)}
             >
-              Dashboard
+              Get Started
             </Link>
-            <Link 
-              href="/saved" 
+            <Link
+              href="/dashboard/saved"
               className="block text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium"
               onClick={() => setIsMenuOpen(false)}
             >

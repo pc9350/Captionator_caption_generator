@@ -37,7 +37,7 @@ export default function Home() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center lg:justify-start">
                 <Link
-                  href="/dashboard"
+                  href="/auth"
                   className="px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-medium transition-all duration-300 text-center shadow-lg hover:shadow-xl transform hover:-translate-y-1 text-base sm:text-lg"
                 >
                   Get Started Free

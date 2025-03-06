@@ -92,10 +92,10 @@ export default function HomeContent() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                 <Link
-                  href="/dashboard"
-                  className="px-8 py-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors text-center"
+                  href="/dashboard/dashboard"
+                  className="px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-medium transition-all duration-300 text-center shadow-lg hover:shadow-xl transform hover:-translate-y-1 text-base sm:text-lg"
                 >
-                  Get Started
+                  Get Started Free
                 </Link>
                 <Link
                   href="#features"

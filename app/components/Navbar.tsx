@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { FiMenu, FiX, FiHome, FiBookmark, FiLogIn, FiLogOut, FiUser } from 'react-icons/fi';
@@ -10,8 +10,10 @@ import Image from 'next/image';
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const { user, logOut } = useAuth();
   const router = useRouter();
@@ -28,11 +30,25 @@ export default function Navbar() {
       }
     };
 
+    // Add event listener for clicks outside the dropdown
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
     window.addEventListener('scroll', handleScroll);
+    
+    // Only add the click outside listener when the dropdown is open
+    if (isDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    
     return () => {
       window.removeEventListener('scroll', handleScroll);
+      document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, []);
+  }, [isDropdownOpen]);
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -42,9 +58,14 @@ export default function Navbar() {
     setIsMenuOpen(false);
   };
 
+  const toggleDropdown = () => {
+    setIsDropdownOpen(!isDropdownOpen);
+  };
+
   const handleSignOut = async () => {
     try {
       await logOut();
+      setIsDropdownOpen(false);
       router.push('/');
     } catch (error) {
       console.error('Error signing out:', error);
@@ -54,12 +75,12 @@ export default function Navbar() {
   const navLinks = [
     {
       name: 'Generator',
-      href: '/dashboard',
+      href: '/dashboard/dashboard',
       icon: <FiHome className="w-5 h-5" />,
     },
     {
       name: 'Saved Captions',
-      href: '/saved',
+      href: '/dashboard/saved',
       icon: <FiBookmark className="w-5 h-5" />,
       requireAuth: true,
     },
@@ -171,11 +192,13 @@ export default function Navbar() {
               transition={{ duration: 0.3, delay: 0.4 }}
             >
               {user ? (
-                <div className="relative group">
+                <div className="relative avatar-dropdown" ref={dropdownRef}>
                   <motion.button 
                     className="flex items-center space-x-2 focus:outline-none"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
+                    onClick={toggleDropdown}
+                    aria-expanded={isDropdownOpen}
                   >
                     <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center overflow-hidden border-2 border-white border-opacity-50 hover:border-opacity-100 transition-all duration-300 shadow-md">
                       {user.photoURL ? (
@@ -191,20 +214,25 @@ export default function Navbar() {
                       )}
                     </div>
                   </motion.button>
-                  <motion.div 
-                    className="absolute right-0 mt-2 w-48 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-xl shadow-xl py-2 z-10 hidden group-hover:block transform origin-top-right transition-all duration-200 border border-gray-100 dark:border-gray-700"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <button
-                      onClick={handleSignOut}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center transition-colors duration-200"
-                    >
-                      <FiLogOut className="mr-2" />
-                      Sign out
-                    </button>
-                  </motion.div>
+                  <AnimatePresence>
+                    {isDropdownOpen && (
+                      <motion.div 
+                        className="absolute right-0 mt-2 w-48 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-xl shadow-xl py-2 z-10 border border-gray-100 dark:border-gray-700"
+                        initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <button
+                          onClick={handleSignOut}
+                          className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center transition-colors duration-200"
+                        >
+                          <FiLogOut className="mr-2" />
+                          Sign out
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               ) : (
                 <motion.div

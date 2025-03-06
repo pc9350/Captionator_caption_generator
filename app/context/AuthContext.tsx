@@ -18,10 +18,10 @@ import { setAuthCookie, removeAuthCookie } from '../utils/authCookies';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, name: string) => Promise<void>;
+  signIn: (email: string, password: string, redirect?: string) => Promise<void>;
+  signUp: (email: string, password: string, name: string, redirect?: string) => Promise<void>;
   logOut: () => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
+  signInWithGoogle: (redirect?: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updateUserProfile: (displayName: string, photoURL?: string) => Promise<void>;
 }
@@ -58,7 +58,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => unsubscribe();
   }, []);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string, redirect?: string) => {
     try {
       setLoading(true);
       const userCredential = await signInWithEmailAndPassword(auth!, email, password);
@@ -66,7 +66,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // Set the auth cookie
       await setAuthCookie(userCredential.user);
       
-      router.push('/dashboard');
+      // Get redirect URL from parameter or query parameters or default to dashboard/dashboard
+      const redirectPath = redirect || new URLSearchParams(window.location.search).get('redirect') || '/dashboard/dashboard';
+      
+      // Add a small delay to ensure the cookie is set before redirecting
+      setTimeout(() => {
+        router.push(redirectPath);
+      }, 100);
     } catch (error: any) {
       console.error('Error signing in:', error.message);
       throw error;
@@ -75,7 +81,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const signUp = async (email: string, password: string, name: string) => {
+  const signUp = async (email: string, password: string, name: string, redirect?: string) => {
     try {
       setLoading(true);
       const result = await createUserWithEmailAndPassword(auth!, email, password);
@@ -90,7 +96,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         await setAuthCookie(result.user);
       }
       
-      router.push('/dashboard');
+      // Get redirect URL from parameter or query parameters or default to dashboard/dashboard
+      const redirectPath = redirect || new URLSearchParams(window.location.search).get('redirect') || '/dashboard/dashboard';
+      
+      // Add a small delay to ensure the cookie is set before redirecting
+      setTimeout(() => {
+        router.push(redirectPath);
+      }, 100);
     } catch (error: any) {
       console.error('Error signing up:', error.message);
       throw error;
@@ -110,7 +122,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = async (redirect?: string) => {
     try {
       setLoading(true);
       const result = await signInWithPopup(auth!, googleProvider!);
@@ -118,7 +130,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // Set the auth cookie
       await setAuthCookie(result.user);
       
-      router.push('/dashboard');
+      // Get redirect URL from parameter or query parameters or default to dashboard/dashboard
+      const redirectPath = redirect || new URLSearchParams(window.location.search).get('redirect') || '/dashboard/dashboard';
+      
+      // Add a small delay to ensure the cookie is set before redirecting
+      setTimeout(() => {
+        router.push(redirectPath);
+      }, 100);
     } catch (error: any) {
       console.error('Error signing in with Google:', error.message);
       throw error;

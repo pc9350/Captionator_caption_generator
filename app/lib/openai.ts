@@ -57,10 +57,72 @@ export const generateCaption = async (
   retryCount = 0
 ): Promise<Caption | null> => {
   try {
-    // ... existing code ...
+    const systemPrompt = `You are a creative caption generator for Instagram. 
+    Generate a caption that matches the following tone: ${tone}.
+    The caption should be engaging, relevant to the image described, and include appropriate hashtags.
+    Format your response as a JSON object with the following structure:
+    {
+      "caption": "The main caption text",
+      "hashtags": ["hashtag1", "hashtag2", "hashtag3"]
+    }`;
+
+    const response = await getCachedChatCompletion({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: prompt }
+      ],
+      max_tokens: 500,
+      temperature: 0.7,
+    });
+
+    if (!response.choices || response.choices.length === 0) {
+      throw new Error('No response from OpenAI');
+    }
+
+    const content = response.choices[0].message.content;
+    
+    try {
+      // Parse the JSON response
+      const parsedResponse = JSON.parse(content);
+      return {
+        id: Date.now().toString(),
+        text: parsedResponse.caption,
+        category: tone,
+        hashtags: parsedResponse.hashtags || [],
+        createdAt: new Date(),
+      };
+    } catch (parseError) {
+      console.error('Error parsing OpenAI response:', parseError);
+      
+      // If we can't parse the JSON, try to extract the caption directly
+      const captionMatch = content.match(/caption["\s:]+([^"]+)/i);
+      const caption = captionMatch ? captionMatch[1].trim() : content.trim();
+      
+      return {
+        id: Date.now().toString(),
+        text: caption,
+        category: tone,
+        hashtags: [],
+        createdAt: new Date(),
+      };
+    }
   } catch (error: unknown) {
     const openAIError = error as OpenAIError;
     console.error('OpenAI API Error:', openAIError);
+    
+    // Retry logic for rate limiting or temporary errors
+    if (retryCount < 3 && (
+      openAIError.status === 429 || // Rate limit
+      openAIError.status === 500 || // Server error
+      openAIError.status === 503    // Service unavailable
+    )) {
+      const delay = Math.pow(2, retryCount) * 1000; // Exponential backoff
+      console.log(`Retrying after ${delay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return generateCaption(prompt, tone, retryCount + 1);
+    }
+    
     throw new Error(openAIError.message || 'Failed to generate caption');
   }
 };

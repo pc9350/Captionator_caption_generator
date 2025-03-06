@@ -24,7 +24,7 @@ export default function Footer() {
                   height={40} 
                 />
               </motion.div>
-              <h3 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-500 dark:from-blue-400 dark:to-purple-400">
+              <h3 className="text-xl pl-2 font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-500 dark:from-blue-400 dark:to-purple-400">
                 Captionator
               </h3>
             </div>
@@ -63,12 +63,12 @@ export default function Footer() {
             </h4>
             <ul className="space-y-3">
               <li>
-                <Link href="/dashboard" className="text-gray-600 hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400 transition-colors duration-200">
+                <Link href="/dashboard/dashboard" className="text-gray-600 hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400 transition-colors duration-200">
                   Caption Generator
                 </Link>
               </li>
               <li>
-                <Link href="/saved" className="text-gray-600 hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400 transition-colors duration-200">
+                <Link href="/dashboard/saved" className="text-gray-600 hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400 transition-colors duration-200">
                   Saved Captions
                 </Link>
               </li>
