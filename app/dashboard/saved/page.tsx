@@ -22,28 +22,44 @@ export default function SavedCaptions() {
   // Fetch saved captions when the component mounts
   useEffect(() => {
     const fetchSavedCaptions = async () => {
-      if (isSignedIn) {
-        setIsLoadingCaptions(true);
-        try {
-          const captions = await getSavedCaptions();
-          // Update the store with the fetched captions
-          if (captions && captions.length > 0) {
-            setGeneratedCaptions(captions);
+      setIsLoadingCaptions(true);
+      try {
+        // Always use local captions
+        let allCaptions = [...savedCaptions];
+        
+        // If signed in, also fetch from Firebase and merge
+        if (isSignedIn) {
+          const firebaseCaptions = await getSavedCaptions();
+          
+          // Merge captions, avoiding duplicates
+          if (firebaseCaptions && firebaseCaptions.length > 0) {
+            // Create a map of existing caption IDs for quick lookup
+            const existingIds = new Set(allCaptions.map(c => c.id));
+            
+            // Add Firebase captions that aren't already in local storage
+            firebaseCaptions.forEach(caption => {
+              if (!existingIds.has(caption.id)) {
+                allCaptions.push(caption);
+              }
+            });
           }
-        } catch (error) {
-          console.error('Error fetching saved captions:', error);
-        } finally {
-          setIsLoadingCaptions(false);
         }
+        
+        // Update the store with all captions
+        if (allCaptions.length > 0) {
+          setGeneratedCaptions(allCaptions);
+        }
+      } catch (error) {
+        console.error('Error fetching saved captions:', error);
+      } finally {
+        setIsLoadingCaptions(false);
       }
     };
 
-    if (isLoaded && isSignedIn) {
+    if (isLoaded) {
       fetchSavedCaptions();
-    } else if (isLoaded) {
-      setIsLoadingCaptions(false);
     }
-  }, [isSignedIn, isLoaded, getSavedCaptions, setGeneratedCaptions]);
+  }, [isSignedIn, isLoaded, getSavedCaptions, setGeneratedCaptions, savedCaptions]);
 
   // Filter captions based on search term and active filter
   useEffect(() => {

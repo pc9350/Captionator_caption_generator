@@ -248,10 +248,10 @@ export const useImageUpload = () => {
       setImageUrl(imageUrl);
       
       // Verify that URL is still valid
-      console.log('Upload completed. Current URLs in store:', 
-        uploadedImages.length, 
-        'images, newest URL:', imageUrl.substring(0, 30) + '...'
-      );
+      // console.log('Upload completed. Current URLs in store:', 
+      //   uploadedImages.length, 
+      //   'images, newest URL:', imageUrl.substring(0, 30) + '...'
+      // );
       
       try {
         // Test if we can access the URL - using Image instead of fetch for blob URLs

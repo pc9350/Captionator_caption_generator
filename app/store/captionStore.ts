@@ -1,11 +1,28 @@
 import { create } from 'zustand';
 import { Caption, CaptionCategory, CaptionTone } from '../types';
+import { persist } from 'zustand/middleware';
 
 // Define the uploaded image type
 interface UploadedImage {
   file: File;
   url: string;  // Blob URL for UI display
   base64: string; // Base64 string for API requests
+}
+
+// Define caption length type
+export type CaptionLength = 'micro' | 'short' | 'medium' | 'long';
+
+// Define spicy level type
+export type SpicyLevel = 'none' | 'mild' | 'medium' | 'spicy' | 'extra-spicy';
+
+// Define caption style type
+export type CaptionStyle = 'none' | 'pattern-interrupt' | 'mysterious' | 'controversial' | 'quote-style' | 'word-invention';
+
+// Define creative language options
+export interface CreativeLanguageOptions {
+  wordInvention: boolean;
+  alliteration: boolean;
+  rhyming: boolean;
 }
 
 interface CaptionState {
@@ -23,6 +40,10 @@ interface CaptionState {
   isGenerating: boolean;
   includeHashtags: boolean;
   includeEmojis: boolean;
+  captionLength: CaptionLength;
+  spicyLevel: SpicyLevel;
+  captionStyle: CaptionStyle;
+  creativeLanguageOptions: CreativeLanguageOptions;
   
   // User preferences
   savedCaptions: Caption[];
@@ -41,76 +62,109 @@ interface CaptionState {
   setIsGenerating: (isGenerating: boolean) => void;
   setIncludeHashtags: (include: boolean) => void;
   setIncludeEmojis: (include: boolean) => void;
+  setCaptionLength: (length: CaptionLength) => void;
+  setSpicyLevel: (level: SpicyLevel) => void;
+  setCaptionStyle: (style: CaptionStyle) => void;
+  setCreativeLanguageOptions: (options: CreativeLanguageOptions) => void;
   saveCaption: (caption: Caption) => void;
   removeCaption: (captionId: string) => void;
+  setSavedCaptions: (captions: Caption[]) => void;
   reset: () => void;
 }
 
-export const useCaptionStore = create<CaptionState>((set) => ({
-  // Initial state
-  selectedImage: null,
-  imageUrl: null,
-  isUploading: false,
-  uploadProgress: 0,
-  uploadedImages: [],
-  generatedCaptions: [],
-  selectedCategory: 'All',
-  selectedTone: 'Aesthetic & Artsy',
-  isGenerating: false,
-  includeHashtags: true,
-  includeEmojis: true,
-  savedCaptions: [],
-  
-  // Actions
-  setSelectedImage: (image) => set({ selectedImage: image }),
-  setImageUrl: (url) => set({ imageUrl: url }),
-  setIsUploading: (isUploading) => set({ isUploading }),
-  setUploadProgress: (progress) => set({ uploadProgress: progress }),
-  addUploadedImage: (image) => 
-    set((state) => ({ 
-      uploadedImages: [...state.uploadedImages, image] 
-    })),
-  clearUploadedImages: () => set({ uploadedImages: [] }),
-  setGeneratedCaptions: (captions) => set({ 
-    generatedCaptions: captions,
-    // If we're setting captions from the saved captions page, update savedCaptions too
-    savedCaptions: captions.some(c => c.id) ? captions : []
-  }),
-  addGeneratedCaption: (caption) => 
-    set((state) => ({ 
-      generatedCaptions: [...state.generatedCaptions, caption] 
-    })),
-  setSelectedCategory: (category) => set({ selectedCategory: category }),
-  setSelectedTone: (tone) => set({ selectedTone: tone }),
-  setIsGenerating: (isGenerating) => set({ isGenerating }),
-  setIncludeHashtags: (include) => set({ includeHashtags: include }),
-  setIncludeEmojis: (include) => set({ includeEmojis: include }),
-  saveCaption: (caption) => 
-    set((state) => {
-      // Check if the caption is already in savedCaptions
-      const isCaptionAlreadySaved = state.savedCaptions.some(
-        (c) => c.id === caption.id || (c.text === caption.text && c.category === caption.category)
-      );
+export const useCaptionStore = create<CaptionState>()(
+  persist(
+    (set) => ({
+      // Initial state
+      selectedImage: null,
+      imageUrl: null,
+      isUploading: false,
+      uploadProgress: 0,
+      uploadedImages: [],
       
-      if (isCaptionAlreadySaved) {
-        return state; // Don't add duplicates
-      }
+      generatedCaptions: [],
+      selectedCategory: 'All',
+      selectedTone: 'casual',
+      isGenerating: false,
+      includeHashtags: true,
+      includeEmojis: true,
+      captionLength: 'medium',
+      spicyLevel: 'none',
+      captionStyle: 'none',
+      creativeLanguageOptions: {
+        wordInvention: false,
+        alliteration: false,
+        rhyming: false
+      },
       
-      return { 
-        savedCaptions: [...state.savedCaptions, caption] 
-      };
+      savedCaptions: [],
+      
+      // Actions
+      setSelectedImage: (image) => set({ selectedImage: image }),
+      setImageUrl: (url) => set({ imageUrl: url }),
+      setIsUploading: (isUploading) => set({ isUploading }),
+      setUploadProgress: (progress) => set({ uploadProgress: progress }),
+      addUploadedImage: (image) => set((state) => ({ 
+        uploadedImages: [...state.uploadedImages, image] 
+      })),
+      clearUploadedImages: () => set({ uploadedImages: [] }),
+      setGeneratedCaptions: (captions) => set({ generatedCaptions: captions }),
+      addGeneratedCaption: (caption) => 
+        set((state) => ({ 
+          generatedCaptions: [...state.generatedCaptions, caption] 
+        })),
+      setSelectedCategory: (category) => set({ selectedCategory: category }),
+      setSelectedTone: (tone) => set({ selectedTone: tone }),
+      setIsGenerating: (isGenerating) => set({ isGenerating }),
+      setIncludeHashtags: (include) => set({ includeHashtags: include }),
+      setIncludeEmojis: (include) => set({ includeEmojis: include }),
+      setCaptionLength: (length) => set({ captionLength: length }),
+      setSpicyLevel: (level) => set({ spicyLevel: level }),
+      setCaptionStyle: (style) => set({ captionStyle: style }),
+      setCreativeLanguageOptions: (options) => set({ creativeLanguageOptions: options }),
+      setSavedCaptions: (captions) => set({ savedCaptions: captions }),
+      saveCaption: (caption) => 
+        set((state) => {
+          // Check if the caption is already in savedCaptions
+          const isCaptionAlreadySaved = state.savedCaptions.some(
+            (c) => c.id === caption.id || (c.text === caption.text && c.category === caption.category)
+          );
+          
+          if (isCaptionAlreadySaved) {
+            return state; // Don't add duplicates
+          }
+          
+          return { 
+            savedCaptions: [...state.savedCaptions, caption] 
+          };
+        }),
+      removeCaption: (captionId) => 
+        set((state) => ({
+          savedCaptions: state.savedCaptions.filter((caption) => caption.id !== captionId)
+        })),
+      reset: () => set({
+        selectedImage: null,
+        imageUrl: null,
+        isUploading: false,
+        uploadProgress: 0,
+        uploadedImages: [],
+        generatedCaptions: [],
+        selectedCategory: 'All',
+        isGenerating: false
+      })
     }),
-  removeCaption: (captionId) => 
-    set((state) => ({ 
-      savedCaptions: state.savedCaptions.filter((c) => c.id !== captionId) 
-    })),
-  reset: () => set({
-    selectedImage: null,
-    imageUrl: null,
-    isUploading: false,
-    uploadProgress: 0,
-    uploadedImages: [],
-    generatedCaptions: [],
-    isGenerating: false,
-  }),
-})); 
+    {
+      name: 'caption-storage', // name of the item in the storage (must be unique)
+      partialize: (state) => ({
+        savedCaptions: state.savedCaptions,
+        selectedTone: state.selectedTone,
+        includeHashtags: state.includeHashtags,
+        includeEmojis: state.includeEmojis,
+        captionLength: state.captionLength,
+        spicyLevel: state.spicyLevel,
+        captionStyle: state.captionStyle,
+        creativeLanguageOptions: state.creativeLanguageOptions
+      }),
+    }
+  )
+); 

@@ -27,7 +27,11 @@ export const useCaptionGeneration = () => {
     generatedCaptions,
     setGeneratedCaptions,
     includeHashtags,
-    includeEmojis
+    includeEmojis,
+    captionLength,
+    spicyLevel,
+    captionStyle,
+    creativeLanguageOptions
   } = useCaptionStore();
 
   const generateCaptions = async (tone: string) => {
@@ -37,8 +41,6 @@ export const useCaptionGeneration = () => {
       return [];
     }
 
-    console.log('Generating captions with tone:', tone);
-    
     try {
       setIsGenerating(true);
       setError(null);
@@ -56,6 +58,12 @@ export const useCaptionGeneration = () => {
           tone,
           includeHashtags,
           includeEmojis,
+          captionLength,
+          spicyLevel,
+          captionStyle,
+          wordInvention: creativeLanguageOptions.wordInvention,
+          alliteration: creativeLanguageOptions.alliteration,
+          rhyming: creativeLanguageOptions.rhyming
         }),
       });
 
@@ -89,6 +97,9 @@ export const useCaptionGeneration = () => {
           category: captionData.category || 'General',
           hashtags,
           emojis,
+          viral_score: typeof captionData.viral_score === 'number' ? captionData.viral_score : 5,
+          userId: user?.uid, // Add user ID if available
+          createdAt: new Date()
         };
       });
 
@@ -129,9 +140,15 @@ export const useCaptionGeneration = () => {
         },
         body: JSON.stringify({
           imageData,
-          tone: 'Casual', // Default tone for regeneration
+          tone: 'casual', // Default tone for regeneration
           includeHashtags,
           includeEmojis,
+          captionLength,
+          spicyLevel,
+          captionStyle,
+          wordInvention: creativeLanguageOptions.wordInvention,
+          alliteration: creativeLanguageOptions.alliteration,
+          rhyming: creativeLanguageOptions.rhyming,
           categories: [category], // Focus on the specific category
         }),
       });
@@ -166,6 +183,9 @@ export const useCaptionGeneration = () => {
         category: category, // Use the requested category
         hashtags,
         emojis,
+        viral_score: typeof captionData.viral_score === 'number' ? captionData.viral_score : 5,
+        userId: user?.uid, // Add user ID if available
+        createdAt: new Date()
       };
 
       return newCaption;

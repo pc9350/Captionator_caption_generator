@@ -1,200 +1,176 @@
-import { useState, useEffect } from 'react';
-import { Switch } from '@headlessui/react';
-import { useCaptionStore } from '../store/captionStore';
-import { FiHash, FiSmile, FiInfo, FiAlertCircle } from 'react-icons/fi';
+'use client';
+
+import { useState } from 'react';
 import { motion } from 'framer-motion';
+import { FiType, FiZap, FiCheck } from 'react-icons/fi';
+import { useCaptionStore, CaptionLength, SpicyLevel, CaptionStyle, CreativeLanguageOptions } from '@/app/store/captionStore';
+import CaptionStyleSelector from './CaptionStyleSelector';
 
 export default function CaptionOptions() {
   const { 
     includeHashtags, 
     setIncludeHashtags, 
     includeEmojis, 
-    setIncludeEmojis 
+    setIncludeEmojis,
+    captionLength,
+    setCaptionLength,
+    spicyLevel,
+    setSpicyLevel,
+    captionStyle,
+    setCaptionStyle,
+    creativeLanguageOptions,
+    setCreativeLanguageOptions
   } = useCaptionStore();
-  
-  const [isMobile, setIsMobile] = useState(false);
 
-  // Check if device is mobile
-  useEffect(() => {
-    const checkIfMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
-    // Initial check
-    checkIfMobile();
-    
-    // Add event listener
-    window.addEventListener('resize', checkIfMobile);
-    
-    // Cleanup
-    return () => {
-      window.removeEventListener('resize', checkIfMobile);
-    };
-  }, []);
+  const lengthOptions = [
+    { value: 'micro' as CaptionLength, label: 'Micro', description: '1-5 words' },
+    { value: 'short' as CaptionLength, label: 'Short', description: '15-25 words' },
+    { value: 'medium' as CaptionLength, label: 'Medium', description: '25-50 words' },
+    { value: 'long' as CaptionLength, label: 'Long', description: '50-100 words' },
+  ];
+
+  const spicyOptions = [
+    { value: 'none' as SpicyLevel, label: 'None', description: 'Keep it clean and neutral' },
+    { value: 'mild' as SpicyLevel, label: 'Mild', description: 'Subtle playfulness' },
+    { value: 'medium' as SpicyLevel, label: 'Medium', description: 'Moderate flirtatiousness' },
+    { value: 'hot' as SpicyLevel, label: 'Hot', description: 'Bold and sensual' },
+    { value: 'extra' as SpicyLevel, label: 'Extra', description: 'Provocative and attention-grabbing' },
+  ];
+
+  const handleStyleChange = (style: string) => {
+    setCaptionStyle(style as CaptionStyle);
+  };
+
+  const handleCreativeOptionsChange = (options: CreativeLanguageOptions) => {
+    setCreativeLanguageOptions(options);
+  };
 
   return (
-    <div className="w-full">
-      <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">
-        Additional Options
-      </h2>
-      
-      <motion.div 
-        className="space-y-4 md:space-y-5"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ staggerChildren: 0.1 }}
-      >
-        <motion.div 
-          className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 md:p-5 border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow duration-300"
-          whileHover={{ 
-            boxShadow: '0 8px 30px rgba(0, 0, 0, 0.12)',
-            y: -2
-          }}
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.3 }}
-        >
-          <div className="flex items-start justify-between w-full">
-            <div className="flex items-start flex-grow pr-4">
-              <div className="p-2.5 bg-blue-50 dark:bg-blue-900/30 rounded-lg text-blue-500 dark:text-blue-400 mr-3 mt-0.5 flex-shrink-0">
-                <FiHash className="w-5 h-5" />
-              </div>
-              <div>
-                <span className="text-sm font-medium text-gray-900 dark:text-white">
-                  Include Hashtags
-                </span>
-                <p className={`${isMobile ? 'text-xs max-w-xs' : 'text-sm w-full'} text-gray-500 dark:text-gray-400 mt-1`}>
-                  {isMobile 
-                    ? "Add hashtags to boost your post's discoverability."
-                    : "Add relevant hashtags to increase reach and discoverability on Instagram. Hashtags help your content get found by users interested in similar topics."
-                  }
-                </p>
-                
-                {!isMobile && (
-                  <div className="mt-3 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg flex items-start w-full">
-                    <FiInfo className="w-4 h-4 text-blue-500 dark:text-blue-400 mt-0.5 mr-2 flex-shrink-0" />
-                    <p className="text-xs text-blue-700 dark:text-blue-300 w-full">
-                      Example: &quot;Sunset vibes at the beach 🌅 #BeachLife #SunsetLover #NaturePhotography&quot;
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-            <Switch
-              checked={includeHashtags}
-              onChange={setIncludeHashtags}
-              className={`${
-                includeHashtags ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'
-              } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 flex-shrink-0 ml-2`}
+    <div className="space-y-8">
+      {/* Caption Length Options */}
+      <div>
+        <div className="flex items-center mb-4">
+          <FiType className="w-5 h-5 text-indigo-500 mr-2" />
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Caption Length</h3>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {lengthOptions.map((option) => (
+            <motion.button
+              key={option.value}
+              onClick={() => setCaptionLength(option.value)}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              className={`relative p-3 rounded-lg border ${
+                captionLength === option.value
+                  ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30'
+                  : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+              } transition-all duration-200`}
             >
-              <span className="sr-only">Include hashtags</span>
-              <motion.span
-                className={`${
-                  includeHashtags ? 'translate-x-6' : 'translate-x-1'
-                } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
-                layout
-                transition={{
-                  type: "spring",
-                  stiffness: 700,
-                  damping: 30
-                }}
-              />
-            </Switch>
-          </div>
-        </motion.div>
-        
-        <motion.div 
-          className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 md:p-5 border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow duration-300"
-          whileHover={{ 
-            boxShadow: '0 8px 30px rgba(0, 0, 0, 0.12)',
-            y: -2
-          }}
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.3, delay: 0.1 }}
-        >
-          <div className="flex items-start justify-between w-full">
-            <div className="flex items-start flex-grow pr-4">
-              <div className="p-2.5 bg-yellow-50 dark:bg-yellow-900/30 rounded-lg text-yellow-500 dark:text-yellow-400 mr-3 mt-0.5 flex-shrink-0">
-                <FiSmile className="w-5 h-5" />
-              </div>
-              <div>
-                <span className="text-sm font-medium text-gray-900 dark:text-white">
-                  Include Emojis
+              <div className="text-center">
+                <span className="block text-sm font-medium text-gray-900 dark:text-white mb-1">
+                  {option.label}
                 </span>
-                <p className={`${isMobile ? 'text-xs max-w-xs' : 'text-sm w-full'} text-gray-500 dark:text-gray-400 mt-1`}>
-                  {isMobile 
-                    ? "Add emojis to make your captions more expressive."
-                    : "Add relevant emojis to make captions more engaging, expressive, and visually appealing. Emojis can help convey emotions that words alone cannot."
-                  }
-                </p>
-                
-                {!isMobile && (
-                  <div className="mt-3 bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg flex items-start w-full">
-                    <FiInfo className="w-4 h-4 text-yellow-500 dark:text-yellow-400 mt-0.5 mr-2 flex-shrink-0" />
-                    <p className="text-xs text-yellow-700 dark:text-yellow-300 w-full">
-                      Example: &quot;Coffee date with my bestie ☕❤️ Nothing beats good conversations!&quot;
-                    </p>
-                  </div>
-                )}
+                <span className="block text-xs text-gray-500 dark:text-gray-400">
+                  {option.description}
+                </span>
               </div>
-            </div>
-            <Switch
-              checked={includeEmojis}
-              onChange={setIncludeEmojis}
-              className={`${
-                includeEmojis ? 'bg-yellow-500' : 'bg-gray-200 dark:bg-gray-700'
-              } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 flex-shrink-0 ml-2`}
-            >
-              <span className="sr-only">Include emojis</span>
-              <motion.span
-                className={`${
-                  includeEmojis ? 'translate-x-6' : 'translate-x-1'
-                } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
-                layout
-                transition={{
-                  type: "spring",
-                  stiffness: 700,
-                  damping: 30
-                }}
-              />
-            </Switch>
-          </div>
-        </motion.div>
-        
-        <motion.div 
-          className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700 mt-2"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
-        >
-          <div className="flex items-start">
-            <FiAlertCircle className="w-4 h-4 text-gray-500 dark:text-gray-400 mt-0.5 mr-2 flex-shrink-0" />
-            <p className={`${isMobile ? 'text-xs' : 'text-xs'} text-gray-600 dark:text-gray-400`}>
-              {isMobile 
-                ? "Options affect AI generation. You can edit captions afterward."
-                : "These options affect the AI-generated captions. You can always edit the captions manually after generation."
-              }
-            </p>
-          </div>
-        </motion.div>
-      </motion.div>
-
-      <div className="mb-8">
-        <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-xl border border-blue-100 dark:border-blue-800">
-          <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-4">Example with Hashtags:</h3>
-          <p className="text-blue-800 dark:text-blue-200">
-            &quot;Sunset vibes at the beach 🌅 #BeachLife #SunsetLover #NaturePhotography&quot;
-          </p>
+              {captionLength === option.value && (
+                <div className="absolute top-2 right-2 bg-indigo-500 text-white rounded-full p-0.5">
+                  <FiCheck className="w-3 h-3" />
+                </div>
+              )}
+            </motion.button>
+          ))}
         </div>
       </div>
 
-      <div className="mb-8">
-        <div className="bg-yellow-50 dark:bg-yellow-900/20 p-6 rounded-xl border border-yellow-100 dark:border-yellow-800">
-          <h3 className="text-lg font-semibold text-yellow-900 dark:text-yellow-100 mb-4">Example with Emojis:</h3>
-          <p className="text-yellow-800 dark:text-yellow-200">
-            &quot;Coffee date with my bestie ☕❤️ Nothing beats good conversations!&quot;
-          </p>
+      {/* Spicy Level Options */}
+      <div>
+        <div className="flex items-center mb-4">
+          <FiZap className="w-5 h-5 text-pink-500 mr-2" />
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Spice Level</h3>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          {spicyOptions.map((option) => (
+            <motion.button
+              key={option.value}
+              onClick={() => setSpicyLevel(option.value)}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              className={`relative p-3 rounded-lg border ${
+                spicyLevel === option.value
+                  ? 'border-pink-500 bg-pink-50 dark:bg-pink-900/30'
+                  : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+              } transition-all duration-200`}
+            >
+              <div className="text-center">
+                <span className="block text-sm font-medium text-gray-900 dark:text-white mb-1">
+                  {option.label}
+                </span>
+                <span className="block text-xs text-gray-500 dark:text-gray-400">
+                  {option.description}
+                </span>
+              </div>
+              {spicyLevel === option.value && (
+                <div className="absolute top-2 right-2 bg-pink-500 text-white rounded-full p-0.5">
+                  <FiCheck className="w-3 h-3" />
+                </div>
+              )}
+            </motion.button>
+          ))}
+        </div>
+      </div>
+
+      {/* Caption Style Selector */}
+      <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+        <CaptionStyleSelector 
+          onStyleChange={handleStyleChange}
+          onCreativeOptionsChange={handleCreativeOptionsChange}
+          initialStyle={captionStyle}
+          initialOptions={creativeLanguageOptions}
+        />
+      </div>
+
+      {/* Toggle Options */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Include Hashtags</span>
+          </div>
+          <button
+            onClick={() => setIncludeHashtags(!includeHashtags)}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
+              includeHashtags ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-700'
+            }`}
+            title="Toggle hashtags"
+          >
+            <span className="sr-only">{includeHashtags ? 'Disable hashtags' : 'Enable hashtags'}</span>
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                includeHashtags ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Include Emojis</span>
+          </div>
+          <button
+            onClick={() => setIncludeEmojis(!includeEmojis)}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
+              includeEmojis ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-700'
+            }`}
+            title="Toggle emojis"
+          >
+            <span className="sr-only">{includeEmojis ? 'Disable emojis' : 'Enable emojis'}</span>
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                includeEmojis ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
         </div>
       </div>
     </div>

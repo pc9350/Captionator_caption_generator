@@ -6,6 +6,7 @@ export interface Caption {
   emojis?: string[];
   userId?: string;
   createdAt?: Date;
+  viral_score: number;
 }
 
 export type CaptionCategory = 
@@ -31,7 +32,12 @@ export type CaptionTone =
   | 'Deep & Thoughtful'
   | 'Trend & Pop Culture-Based'
   | 'Minimal & Classy'
-  | 'Cool & Attitude';
+  | 'Cool & Attitude'
+  | 'casual'
+  | 'professional'
+  | 'funny'
+  | 'inspirational'
+  | 'storytelling';
 
 export interface User {
   id: string;
