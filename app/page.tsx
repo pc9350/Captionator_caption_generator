@@ -29,7 +29,7 @@ export default function Home() {
               <div className="hidden sm:inline-block px-3 py-1 bg-indigo-100 dark:bg-indigo-900/50 rounded-full text-indigo-800 dark:text-indigo-300 font-medium text-xs sm:text-sm mb-2 animate-pulse">
                 AI-Powered Caption Generator
               </div>
-              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 leading-tight pb-2">
+              <h1 className="text-3xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 leading-tight pb-2">
                 Perfect Captions for Any Image
               </h1>
               <p className="text-sm sm:text-base md:text-lg text-gray-700 dark:text-gray-300 leading-relaxed">
