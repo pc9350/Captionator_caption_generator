@@ -77,23 +77,28 @@ export default function Footer() {
 
           <div>
             <h4 className="text-sm font-semibold text-gray-900 dark:text-white uppercase tracking-wider mb-4">
-              Resources
+              Company
             </h4>
             <ul className="space-y-3">
               <li>
-                <a href="https://openai.com" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400 transition-colors duration-200">
-                  OpenAI
-                </a>
+                <Link href="/about" className="text-gray-600 hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400 transition-colors duration-200">
+                  About Us
+                </Link>
               </li>
               <li>
-                <a href="https://nextjs.org" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400 transition-colors duration-200">
-                  Next.js
-                </a>
+                <Link href="/contact" className="text-gray-600 hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400 transition-colors duration-200">
+                  Contact
+                </Link>
               </li>
               <li>
-                <a href="https://firebase.google.com" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400 transition-colors duration-200">
-                  Firebase
-                </a>
+                <Link href="/terms" className="text-gray-600 hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400 transition-colors duration-200">
+                  Terms & Conditions
+                </Link>
+              </li>
+              <li>
+                <Link href="/privacy" className="text-gray-600 hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400 transition-colors duration-200">
+                  Privacy Policy
+                </Link>
               </li>
             </ul>
           </div>
