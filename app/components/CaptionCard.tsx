@@ -29,6 +29,9 @@ export default function CaptionCard({ caption, index, isSavedCaption = false }: 
   const [isDeleting, setIsDeleting] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
 
+  // Get the includeHashtags and includeEmojis settings from the store
+  const { includeHashtags, includeEmojis } = useCaptionStore();
+
   // Update isSaved when isSavedCaption changes
   useEffect(() => {
     setIsSaved(isSavedCaption);
@@ -257,9 +260,14 @@ export default function CaptionCard({ caption, index, isSavedCaption = false }: 
           <div className="mt-2">
             <p className="text-gray-800 dark:text-gray-200 text-base leading-relaxed">
               {caption.text}
+              {includeEmojis && caption.emojis && caption.emojis.length > 0 && (
+                <span className="ml-2">
+                  {caption.emojis.join(' ')}
+                </span>
+              )}
             </p>
             
-            {caption.hashtags && caption.hashtags.length > 0 && (
+            {includeHashtags && caption.hashtags && caption.hashtags.length > 0 && (
               <div className="mt-3 flex flex-wrap gap-1.5">
                 {caption.hashtags.map((tag, i) => (
                   <span 

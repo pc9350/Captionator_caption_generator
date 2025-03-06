@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDropzone } from 'react-dropzone';
-import { FiUpload, FiX, FiImage, FiGrid, FiAlertCircle, FiPlus, FiChevronRight, FiMaximize2, FiLayers, FiTrash2, FiCamera, FiChevronLeft } from 'react-icons/fi';
+import { FiUpload, FiX, FiImage, FiGrid, FiAlertCircle, FiPlus, FiChevronRight, FiMaximize2, FiLayers, FiTrash2, FiCamera, FiChevronLeft, FiVideo, FiFilm } from 'react-icons/fi';
 import { useImageUpload } from '../hooks/useImageUpload';
 import uploadAnimation from "../animations/upload-animation.json";
 import Lottie from "lottie-react";
@@ -28,6 +28,7 @@ export default function ImageUploader() {
   >({});
   const [isValidatingUrls, setIsValidatingUrls] = useState(false);
   const [isConvertingToDataUrl, setIsConvertingToDataUrl] = useState(false);
+  const [mediaType, setMediaType] = useState<'image' | 'video'>('image');
 
   // Update active image index when uploaded images change
   useEffect(() => {
@@ -64,60 +65,70 @@ export default function ImageUploader() {
 
   // Update the image validity check
   const checkImageValidity = useCallback(async () => {
-    // Remove or comment out console logs
-    // console.log("Checking validity of", uploadedImages.length, "images");
-
+    // Skip validation if we're already validating or converting
+    if (isValidatingUrls || isConvertingToDataUrl) {
+      return;
+    }
+    
     const validityMap: Record<number, boolean> = {};
 
     for (let i = 0; i < uploadedImages.length; i++) {
-      const img = uploadedImages[i];
+      const media = uploadedImages[i];
       try {
-        const testImg = document.createElement('img');
-        const isValid = await new Promise<boolean>((resolve) => {
-          testImg.onload = () => {
-            // Remove or comment out console logs
-            // console.log(`Image ${i} is valid:`, img.url.substring(0, 30) + "...");
-            resolve(true);
-          };
-          testImg.onerror = () => {
-            console.error(`Image ${i} is invalid:`, img.url.substring(0, 30) + "...");
-            resolve(false);
-          };
-          testImg.src = img.url;
-        });
+        // Check if this is a video
+        if (media.isVideo || (media.file && media.file.type.startsWith('video/'))) {
+          // For videos, we'll just mark them as valid to prevent infinite loops
+          validityMap[i] = true;
+        } else {
+          // For images, use the existing approach
+          const testImg = document.createElement('img');
+          const isValid = await new Promise<boolean>((resolve) => {
+            testImg.onload = () => {
+              resolve(true);
+            };
+            testImg.onerror = () => {
+              console.error(`Image ${i} is invalid:`, media.url.substring(0, 30) + "...");
+              resolve(false);
+            };
+            testImg.src = media.url;
+          });
 
-        validityMap[i] = isValid;
+          validityMap[i] = isValid;
+        }
       } catch (err) {
-        console.error(`Error validating image ${i}:`, err);
+        console.error(`Error validating media ${i}:`, err);
         validityMap[i] = false;
       }
     }
 
     setImageValidityMap(validityMap);
-    // Remove or comment out console logs
-    // console.log("Image validity map:", validityMap);
 
     // If we find any invalid images, try to validate/fix blob URLs
     const hasInvalidImages = Object.values(validityMap).some((valid) => !valid);
     if (hasInvalidImages && !isValidatingUrls) {
-      // Remove or comment out console logs
-      // console.log("Found invalid images, attempting to fix blob URLs");
       handleValidateBlobUrls();
     }
-  }, [uploadedImages, isValidatingUrls, handleValidateBlobUrls]);
+  }, [uploadedImages, isValidatingUrls, isConvertingToDataUrl, handleValidateBlobUrls]);
 
   // Validate image URLs whenever uploadedImages change
   useEffect(() => {
     // Add a check to prevent unnecessary validations
-    if (uploadedImages.length > 0 && !isValidatingUrls) {
-      // Use a ref to track if this is the initial validation
-      const timeoutId = setTimeout(() => {
-        checkImageValidity();
-      }, 100);
+    if (uploadedImages.length > 0 && !isValidatingUrls && !isConvertingToDataUrl) {
+      // Check if we have any videos - if so, skip validation to prevent infinite loops
+      const hasVideos = uploadedImages.some(
+        media => media.isVideo || (media.file && media.file.type.startsWith('video/'))
+      );
       
-      return () => clearTimeout(timeoutId);
+      if (!hasVideos) {
+        // Only validate images, not videos
+        const timeoutId = setTimeout(() => {
+          checkImageValidity();
+        }, 100);
+        
+        return () => clearTimeout(timeoutId);
+      }
     }
-  }, [uploadedImages.length, checkImageValidity, isValidatingUrls]);
+  }, [uploadedImages, checkImageValidity, isValidatingUrls, isConvertingToDataUrl]);
 
   // Utility function to convert a blob URL to a data URL
   const blobToDataUrl = async (blobUrl: string): Promise<string> => {
@@ -193,15 +204,15 @@ export default function ImageUploader() {
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
       if (acceptedFiles && acceptedFiles.length > 0) {
-        // console.log(
-        //   "Dropzone onDrop called with",
-        //   acceptedFiles.length,
-        //   "files"
-        // );
         // Process all uploaded files
         for (const file of acceptedFiles) {
           if (file.type.startsWith("image/")) {
-          await uploadImage(file);
+            setMediaType('image');
+            await uploadImage(file);
+          } else if (file.type.startsWith("video/")) {
+            setMediaType('video');
+            // Pass isVideo flag to uploadImage
+            await uploadImage(file, true);
           }
         }
       }
@@ -215,6 +226,7 @@ export default function ImageUploader() {
     onDrop,
     accept: {
       "image/*": [".jpeg", ".jpg", ".png", ".gif", ".webp"],
+      "video/*": [".mp4", ".webm", ".mov", ".avi"]
     },
     multiple: true, // Allow multiple file selection
     noClick: true, // Prevent opening file dialog on click
@@ -239,16 +251,20 @@ export default function ImageUploader() {
   const handleFileInputChange = async (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
-    // console.log("File input change event triggered");
     e.preventDefault(); // Prevent default
     e.stopPropagation(); // Stop event propagation
 
     if (e.target.files && e.target.files.length > 0) {
-      // console.log("Processing", e.target.files.length, "files from file input");
-
       // Upload all selected files
       for (let i = 0; i < e.target.files.length; i++) {
-        await uploadImage(e.target.files[i]);
+        const file = e.target.files[i];
+        if (file.type.startsWith("image/")) {
+          setMediaType('image');
+          await uploadImage(file);
+        } else if (file.type.startsWith("video/")) {
+          setMediaType('video');
+          await uploadImage(file, true);
+        }
       }
 
       // Reset the input value to allow selecting the same file again
@@ -337,11 +353,11 @@ export default function ImageUploader() {
         className="mb-4"
       >
         <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2 flex items-center">
-          <FiCamera className="mr-2 text-blue-500" /> Upload Your Images
+          <FiCamera className="mr-2 text-blue-500" /> Upload Your Media
         </h2>
         <p className="text-sm text-gray-600 dark:text-gray-400">
-          High-quality images will generate better captions. You can upload
-          multiple images.
+          High-quality images or videos will generate better captions. You can upload
+          multiple files.
         </p>
       </motion.div>
 
@@ -362,11 +378,11 @@ export default function ImageUploader() {
           type="file"
           ref={fileInputRef}
           className="hidden"
-          accept="image/*"
+          accept="image/*,video/*"
           multiple // Allow multiple file selection
           onChange={handleFileInputChange}
-          aria-label="Upload images"
-          title="Upload images"
+          aria-label="Upload media"
+          title="Upload media"
         />
 
         {/* Background */}
@@ -571,21 +587,39 @@ export default function ImageUploader() {
                     {/* Active image */}
                     <div className="relative w-full h-full flex items-center justify-center">
                       {uploadedImages[activeImageIndex] && (
-                        <Image
-                          src={uploadedImages[activeImageIndex].url}
-                          alt={`Uploaded ${activeImageIndex + 1}`}
-                          width={500}
-                          height={500}
-                          className="max-w-full max-h-full object-contain"
-                          style={{
-                            width: "auto",
-                            height: "auto"
-                          }}
-                          onError={(e) => {
-                            console.error('Image failed to load:', e);
-                            e.currentTarget.src = '/fallback.svg';
-                          }}
-                        />
+                        <>
+                          {uploadedImages[activeImageIndex].file.type.startsWith("image/") ? (
+                            <Image
+                              src={uploadedImages[activeImageIndex].url}
+                              alt={`Uploaded ${activeImageIndex + 1}`}
+                              width={500}
+                              height={500}
+                              className="max-w-full max-h-full object-contain"
+                              style={{
+                                width: "auto",
+                                height: "auto"
+                              }}
+                              onError={(e) => {
+                                console.error('Image failed to load:', e);
+                                e.currentTarget.src = '/fallback.svg';
+                              }}
+                            />
+                          ) : (
+                            <video
+                              src={uploadedImages[activeImageIndex].url}
+                              controls
+                              className="max-w-full max-h-full object-contain"
+                              style={{
+                                width: "auto",
+                                height: "auto",
+                                backgroundColor: "#2d3748"
+                              }}
+                              onError={(e) => {
+                                console.error('Video failed to load:', e);
+                              }}
+                            />
+                          )}
+                        </>
                       )}
 
                       {/* Image controls - positioned at the top right */}
@@ -690,17 +724,29 @@ export default function ImageUploader() {
           className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
           onClick={() => setShowFullscreen(false)}
         >
-          <Image
-            src={activeImageUrl}
-            alt="Fullscreen preview"
-            width={1000}
-            height={1000}
-            className="max-w-full max-h-full object-contain"
-            style={{
-              width: "auto",
-              height: "auto"
-            }}
-          />
+          {uploadedImages[activeImageIndex].file.type.startsWith("image/") ? (
+            <Image
+              src={activeImageUrl}
+              alt="Fullscreen preview"
+              width={1000}
+              height={1000}
+              className="max-w-full max-h-full object-contain"
+              style={{
+                width: "auto",
+                height: "auto"
+              }}
+            />
+          ) : (
+            <video
+              src={activeImageUrl}
+              controls
+              className="max-w-full max-h-full object-contain"
+              style={{
+                width: "auto",
+                height: "auto"
+              }}
+            />
+          )}
           <button
             className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/50 flex items-center justify-center text-white"
             onClick={() => setShowFullscreen(false)}

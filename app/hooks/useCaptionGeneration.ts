@@ -45,25 +45,34 @@ export const useCaptionGeneration = () => {
       setIsGenerating(true);
       setError(null);
 
-      // Get all base64 image data from uploaded images
-      const imageData = uploadedImages.map(img => img.base64);
-
+      // Get the current active image/video
+      const currentMedia = uploadedImages[0]; // Use the first uploaded media
+      
+      // Check if the base64 data is valid
+      if (!currentMedia.base64 || !currentMedia.base64.startsWith('data:')) {
+        throw new Error('Invalid media data. Please try uploading again.');
+      }
+      
+      // Add a timestamp to prevent caching and ensure fresh results
+      const timestamp = Date.now();
+      
       const response = await fetch('/api/generate-caption', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
         },
         body: JSON.stringify({
-          imageData,
+          image: currentMedia.base64,
           tone,
           includeHashtags,
           includeEmojis,
           captionLength,
           spicyLevel,
           captionStyle,
-          wordInvention: creativeLanguageOptions.wordInvention,
-          alliteration: creativeLanguageOptions.alliteration,
-          rhyming: creativeLanguageOptions.rhyming
+          creativeLanguageOptions,
+          isVideo: currentMedia.isVideo || false,
+          timestamp // Add timestamp to prevent caching
         }),
       });
 
@@ -92,27 +101,37 @@ export const useCaptionGeneration = () => {
           : [];
         
         return {
-          id: uuidv4(),
+          id: captionData.id || uuidv4(),
           text: captionText,
           category: captionData.category || 'General',
           hashtags,
           emojis,
           viral_score: typeof captionData.viral_score === 'number' ? captionData.viral_score : 5,
           userId: user?.uid, // Add user ID if available
-          createdAt: new Date()
+          createdAt: captionData.createdAt || new Date()
         };
       });
 
+      // Replace existing captions with new ones
       setGeneratedCaptions(newCaptions);
-      
-      // History saving functionality removed
       
       return newCaptions;
     } catch (error: unknown) {
       const apiError = error as ApiError;
       console.error('Error generating caption:', apiError);
-      setError(apiError.message || 'Failed to generate caption');
-      return null;
+      
+      // Provide more helpful error messages
+      if (apiError.message?.includes('No captions were generated')) {
+        setError('No captions could be generated. This might be due to the content of the image or video. Please try a different media file or adjust your settings.');
+      } else if (apiError.message?.includes('Invalid media data')) {
+        setError('There was a problem with your media file. Please try uploading it again.');
+      } else if (apiError.message?.includes('Rate limit')) {
+        setError('You have reached the rate limit. Please wait a moment and try again.');
+      } else {
+        setError(apiError.message || 'Failed to generate caption. Please try again later.');
+      }
+      
+      return [];
     } finally {
       setIsGenerating(false);
     }
@@ -130,26 +149,35 @@ export const useCaptionGeneration = () => {
         return null;
       }
 
-      // Get all base64 image data from uploaded images
-      const imageData = uploadedImages.map(img => img.base64);
+      // Get the current active image/video
+      const currentMedia = uploadedImages[0]; // Use the first uploaded media
+
+      // Check if the base64 data is valid
+      if (!currentMedia.base64 || !currentMedia.base64.startsWith('data:')) {
+        throw new Error('Invalid media data. Please try uploading again.');
+      }
+      
+      // Add a timestamp to prevent caching and ensure fresh results
+      const timestamp = Date.now();
 
       const response = await fetch('/api/generate-caption', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
         },
         body: JSON.stringify({
-          imageData,
+          image: currentMedia.base64,
           tone: 'casual', // Default tone for regeneration
           includeHashtags,
           includeEmojis,
           captionLength,
           spicyLevel,
           captionStyle,
-          wordInvention: creativeLanguageOptions.wordInvention,
-          alliteration: creativeLanguageOptions.alliteration,
-          rhyming: creativeLanguageOptions.rhyming,
+          creativeLanguageOptions,
           categories: [category], // Focus on the specific category
+          isVideo: currentMedia.isVideo || false,
+          timestamp // Add timestamp to prevent caching
         }),
       });
 
@@ -176,26 +204,37 @@ export const useCaptionGeneration = () => {
         ? captionData.emojis.filter((emoji: any) => typeof emoji === 'string')
         : [];
       
-      // Create a new Caption object with a unique ID
+      // Create a new caption object
       const newCaption: Caption = {
-        id: uuidv4(),
+        id: captionData.id || uuidv4(),
         text: captionData.text || 'No caption text provided',
-        category: category, // Use the requested category
+        category: captionData.category || category || 'General',
         hashtags,
         emojis,
         viral_score: typeof captionData.viral_score === 'number' ? captionData.viral_score : 5,
-        userId: user?.uid, // Add user ID if available
-        createdAt: new Date()
+        userId: user?.uid,
+        createdAt: captionData.createdAt || new Date()
       };
-
+      
+      // Add the new caption to the generated captions
+      setGeneratedCaptions([...generatedCaptions, newCaption]);
+      
       return newCaption;
-    } catch (err: unknown) {
-      console.error('Error regenerating caption:', err);
-      if (err instanceof Error) {
-        setError(err.message || 'Failed to regenerate caption. Please try again.');
+    } catch (error: unknown) {
+      const apiError = error as ApiError;
+      console.error('Error regenerating caption:', apiError);
+      
+      // Provide more helpful error messages
+      if (apiError.message?.includes('No captions were generated')) {
+        setError('No captions could be generated. This might be due to the content of the image or video. Please try a different media file or adjust your settings.');
+      } else if (apiError.message?.includes('Invalid media data')) {
+        setError('There was a problem with your media file. Please try uploading it again.');
+      } else if (apiError.message?.includes('Rate limit')) {
+        setError('You have reached the rate limit. Please wait a moment and try again.');
       } else {
-        setError('An unexpected error occurred while regenerating the caption.');
+        setError(apiError.message || 'Failed to regenerate caption. Please try again later.');
       }
+      
       return null;
     } finally {
       setIsGenerating(false);

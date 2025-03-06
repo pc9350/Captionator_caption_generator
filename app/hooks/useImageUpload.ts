@@ -13,6 +13,66 @@ const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
+// Helper function to get video thumbnail
+const getVideoThumbnail = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.playsInline = true;
+    video.muted = true;
+    
+    // Create object URL for the video file
+    const url = URL.createObjectURL(file);
+    video.src = url;
+    
+    // When video metadata is loaded, seek to the middle of the video
+    video.onloadedmetadata = () => {
+      // Seek to 25% of the video duration to get a representative frame
+      video.currentTime = video.duration * 0.25;
+    };
+    
+    // When the video has seeked to the desired time
+    video.onseeked = () => {
+      try {
+        // Create a canvas to draw the video frame
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        
+        // Draw the video frame on the canvas
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          URL.revokeObjectURL(url);
+          reject(new Error('Could not get canvas context'));
+          return;
+        }
+        
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // Convert the canvas to a data URL
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+        
+        // Clean up
+        URL.revokeObjectURL(url);
+        
+        resolve(dataUrl);
+      } catch (error) {
+        URL.revokeObjectURL(url);
+        reject(error);
+      }
+    };
+    
+    // Handle errors
+    video.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Error loading video'));
+    };
+    
+    // Start loading the video
+    video.load();
+  });
+};
+
 // Helper function to resize an image before uploading
 // Using smaller dimensions and lower quality to ensure compatibility with OpenAI API
 const resizeImage = (file: File, maxWidth = 800, maxHeight = 800, quality = 0.7): Promise<Blob> => {
@@ -129,6 +189,34 @@ export const useImageUpload = () => {
         return img;
       }
 
+      // For videos, we need to be more careful about regenerating URLs
+      // as this can cause infinite loops
+      if (img.isVideo || (img.file && img.file.type.startsWith('video/'))) {
+        // Only regenerate if absolutely necessary
+        // For videos, we'll check if the URL is accessible by creating a video element
+        try {
+          const video = document.createElement('video');
+          video.src = img.url;
+          // If we can set the src without error, assume it's valid
+          return img;
+        } catch (err) {
+          console.error('Error checking video URL, will regenerate:', err);
+          // Only regenerate if there was an error
+          needsUpdate = true;
+          try {
+            URL.revokeObjectURL(img.url);
+          } catch (err) {
+            console.error('Error revoking URL:', err);
+          }
+          return {
+            ...img,
+            url: URL.createObjectURL(img.file),
+            isVideo: true
+          };
+        }
+      }
+
+      // For images, use the original approach
       // More reliable way to check if a blob URL is still valid
       try {
         // If the file is still available, regenerate the URL to be safe
@@ -170,17 +258,19 @@ export const useImageUpload = () => {
     }
   };
 
-  const uploadImage = async (file: File): Promise<string | null> => {
+  const uploadImage = async (file: File, isVideoFile = false): Promise<string | null> => {
     if (!file) return null;
 
-    // Check file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      setError('File size exceeds 10MB limit');
+    const isVideo = isVideoFile || file.type.startsWith('video/');
+    
+    // Check file size (max 50MB for videos, 10MB for images)
+    const maxSize = isVideo ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      setError(`File size exceeds ${isVideo ? '50MB' : '10MB'} limit`);
       return null;
     }
 
     try {
-      // console.log('Starting upload process for file:', file.name, 'size:', Math.round(file.size / 1024), 'KB');
       setIsUploading(true);
       setSelectedImage(file);
       setError(null);
@@ -197,28 +287,29 @@ export const useImageUpload = () => {
       }, 200);
 
       // Create a persistent blob URL for display in the UI
-      // This URL will remain valid until explicitly revoked
-      const imageUrl = URL.createObjectURL(file);
-      // console.log('Created blob URL:', imageUrl, 'for file:', file.name);
+      const mediaUrl = URL.createObjectURL(file);
       
-      // Resize the image to reduce file size
-      let resizedImage = await resizeImage(file);
-      // console.log('Resized image successfully. Original size:', Math.round(file.size / 1024), 'KB');
+      // For videos, we need to generate a thumbnail for the API
+      let base64Media: string;
       
-      let base64Image = await fileToBase64(new File([resizedImage], file.name, { type: 'image/jpeg' }));
-      // console.log('Converted to base64, length:', base64Image.length.toString().substring(0, 6) + '...');
-      
-      // If the base64 is still too large, resize again with lower quality
-      if (isBase64TooLarge(base64Image)) {
-        console.log('Image still too large, resizing again with lower quality');
-        resizedImage = await resizeImage(file, 600, 600, 0.5);
-        base64Image = await fileToBase64(new File([resizedImage], file.name, { type: 'image/jpeg' }));
+      if (isVideo) {
+        // Generate a thumbnail from the video for the API
+        base64Media = await getVideoThumbnail(file);
+      } else {
+        // For images, process as before
+        let resizedImage = await resizeImage(file);
+        base64Media = await fileToBase64(new File([resizedImage], file.name, { type: 'image/jpeg' }));
         
-        // If still too large, resize one more time with even lower quality
-        if (isBase64TooLarge(base64Image)) {
-          console.log('Image still too large, resizing with minimum quality');
-          resizedImage = await resizeImage(file, 400, 400, 0.3);
-          base64Image = await fileToBase64(new File([resizedImage], file.name, { type: 'image/jpeg' }));
+        // If the base64 is still too large, resize again with lower quality
+        if (isBase64TooLarge(base64Media)) {
+          resizedImage = await resizeImage(file, 600, 600, 0.5);
+          base64Media = await fileToBase64(new File([resizedImage], file.name, { type: 'image/jpeg' }));
+          
+          // If still too large, resize one more time with even lower quality
+          if (isBase64TooLarge(base64Media)) {
+            resizedImage = await resizeImage(file, 400, 400, 0.3);
+            base64Media = await fileToBase64(new File([resizedImage], file.name, { type: 'image/jpeg' }));
+          }
         }
       }
       
@@ -231,42 +322,23 @@ export const useImageUpload = () => {
       // Short delay to show 100% before completing
       await new Promise(resolve => setTimeout(resolve, 200));
       
-      // Create an object with all the image data
-      const uploadedImage = { 
+      // Create an object with all the media data
+      const uploadedMedia = { 
         file, 
-        url: imageUrl,
-        base64: base64Image 
+        url: mediaUrl,
+        base64: base64Media,
+        isVideo: isVideo
       };
       
-      // console.log('Adding image to store with URL:', imageUrl.substring(0, 30) + '...');
+      // Add to uploaded media array and set current media
+      addUploadedImage(uploadedMedia);
       
-      // Add to uploaded images array and set current image
-      // Store both the blob URL for UI display and base64 for API requests
-      addUploadedImage(uploadedImage);
+      // Set the most recently uploaded media as the current media
+      setImageUrl(mediaUrl);
       
-      // Set the most recently uploaded image as the current image
-      setImageUrl(imageUrl);
-      
-      // Verify that URL is still valid
-      // console.log('Upload completed. Current URLs in store:', 
-      //   uploadedImages.length, 
-      //   'images, newest URL:', imageUrl.substring(0, 30) + '...'
-      // );
-      
-      try {
-        // Test if we can access the URL - using Image instead of fetch for blob URLs
-        // since fetch with HEAD method isn't supported for blob URLs
-        const testImg = new Image();
-        testImg.onload = () => console.log('Blob URL is accessible and valid');
-        testImg.onerror = (err) => console.error('Blob URL might be invalid:', err);
-        testImg.src = imageUrl;
-      } catch (e) {
-        console.error('Error testing blob URL:', e);
-      }
-      
-      return imageUrl;
-    } catch (err) {
-      console.error('Error uploading image:', err);
+      return mediaUrl;
+    } catch (error) {
+      console.error('Error uploading image:', error);
       setError('Failed to upload image');
       return null;
     } finally {

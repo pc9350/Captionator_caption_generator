@@ -31,12 +31,34 @@ const extractJsonFromString = (str: string): JsonResponse => {
       return parsedJson.captions[0];
     }
     
+    // If we have a text field, assume it's a caption object
+    if (parsedJson.text) {
+      // Ensure all required fields are present
+      return {
+        text: parsedJson.text,
+        category: parsedJson.category || 'General',
+        hashtags: Array.isArray(parsedJson.hashtags) ? parsedJson.hashtags : [],
+        emojis: Array.isArray(parsedJson.emojis) ? parsedJson.emojis : [],
+        viral_score: typeof parsedJson.viral_score === 'number' ? parsedJson.viral_score : 5
+      };
+    }
+    
     // Otherwise return the parsed JSON as is
     return parsedJson;
   } catch (error) {
     console.error('Error extracting JSON:', error);
+    // Try to extract any text that looks like a caption
+    const textMatch = str.match(/["']text["']\s*:\s*["']([^"']+)["']/i);
+    if (textMatch && textMatch[1]) {
+      return {
+        text: textMatch[1],
+        category: 'General',
+        viral_score: 5 // Default to 5 for consistency
+      };
+    }
+    
     return {
-      text: str,
+      text: str.length > 100 ? str.substring(0, 100) + '...' : str,
       category: 'General',
       viral_score: 5 // Default to 5 for consistency
     };
@@ -45,7 +67,8 @@ const extractJsonFromString = (str: string): JsonResponse => {
 
 // Helper function to normalize caption fields
 const normalizeCaptions = (captions: JsonResponse[]): Caption[] => {
-  return captions.map(caption => {
+  // Filter out any null or undefined captions
+  return captions.filter(caption => caption && typeof caption === 'object').map(caption => {
     // Ensure viral_score is a number between 1-10
     let viralScore = 5; // Default value
     
@@ -61,32 +84,181 @@ const normalizeCaptions = (captions: JsonResponse[]): Caption[] => {
       }
     }
     
+    // Ensure hashtags is an array
+    let hashtags: string[] = [];
+    if (caption.hashtags) {
+      if (Array.isArray(caption.hashtags)) {
+        hashtags = caption.hashtags as string[];
+      } else if (typeof caption.hashtags === 'string') {
+        // If hashtags is a string, try to split it
+        hashtags = (caption.hashtags as string).split(/\s+/).filter((tag: string) => tag.startsWith('#'));
+      }
+    }
+    
+    // Ensure emojis is an array
+    let emojis: string[] = [];
+    if (caption.emojis) {
+      if (Array.isArray(caption.emojis)) {
+        emojis = caption.emojis as string[];
+      } else if (typeof caption.emojis === 'string') {
+        // If emojis is a string, convert to array of characters
+        emojis = Array.from(caption.emojis as string);
+      }
+    }
+    
+    // Generate a unique ID for the caption
+    const id = `caption-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    
     return {
+      id,
       text: caption.text || '',
       category: caption.category || 'General',
-      hashtags: caption.hashtags || [],
-      emojis: caption.emojis || [],
-      viral_score: viralScore // Use the processed viral score
+      hashtags: hashtags,
+      emojis: emojis,
+      viral_score: viralScore, // Use the processed viral score
+      createdAt: new Date()
     };
   });
 };
 
 export async function POST(req: NextRequest) {
   try {
-    const { imageData, tone, includeHashtags, includeEmojis, categories, captionLength, spicyLevel, wordInvention, alliteration, rhyming, captionStyle } = await req.json();
-
-    if (!imageData || !Array.isArray(imageData) || imageData.length === 0) {
-      return NextResponse.json(
-        { error: 'At least one image is required' },
-        { status: 400 }
-      );
+    const data = await req.json();
+    const { 
+      image, 
+      tone = 'casual', 
+      includeHashtags = true, 
+      includeEmojis = true,
+      captionLength = 'micro',
+      spicyLevel = 'none',
+      captionStyle = 'none',
+      creativeLanguageOptions = {
+        wordInvention: false,
+        alliteration: false,
+        rhyming: false
+      },
+      isVideo = false, // New parameter to indicate if the content is a video
+      timestamp // Add timestamp parameter
+    } = data;
+    
+    if (!image) {
+      return NextResponse.json({ error: 'No image provided' }, { status: 400 });
     }
+
+    // Prepare the system message based on user preferences
+    let systemMessage = `You are an expert Instagram caption writer. Analyze the ${isVideo ? 'video thumbnail' : 'image'} and create `;
+    
+    // Define caption length more precisely with EXACT word count requirements
+    if (captionLength === 'single-word') {
+      systemMessage += 'a SINGLE WORD caption only. The caption must be exactly one word that perfectly captures the essence of the image. No phrases, no sentences, just one powerful, evocative word.';
+    } else if (captionLength === 'micro') {
+      systemMessage += 'a very brief caption of EXACTLY 2-3 words. Not one word, not four words, but precisely 2-3 words that capture the essence of the image in a concise way.';
+    } else if (captionLength === 'short') {
+      systemMessage += 'a short caption of EXACTLY 10-15 words. Not fewer than 10 words and not more than 15 words. This should be a complete sentence or two that describes the image effectively.';
+    } else if (captionLength === 'medium') {
+      systemMessage += 'a medium-length caption of EXACTLY 25-40 words. Not fewer than 25 words and not more than 40 words. This should be 2-3 sentences that provide good context and detail.';
+    } else {
+      systemMessage += 'a detailed caption of EXACTLY 50-75 words. Not fewer than 50 words and not more than 75 words. This should be a comprehensive description with multiple sentences and storytelling elements.';
+    }
+    
+    systemMessage += ` Use a ${tone} tone.`;
+    
+    // Add instructions for hashtags and emojis
+    if (includeHashtags) {
+      systemMessage += ' Include relevant hashtags.';
+    } else {
+      systemMessage += ' Do NOT include any hashtags.';
+    }
+    
+    if (includeEmojis) {
+      systemMessage += ' Include appropriate emojis.';
+    } else {
+      systemMessage += ' Do NOT include any emojis.';
+    }
+    
+    // Add instructions for spicy level
+    if (spicyLevel !== 'none') {
+      systemMessage += ` Make the caption ${spicyLevel === 'mild' ? 'slightly provocative' : spicyLevel === 'medium' ? 'moderately provocative' : spicyLevel === 'spicy' ? 'provocative' : 'very provocative'}.`;
+    }
+    
+    // Add instructions for caption style
+    if (captionStyle !== 'none') {
+      switch (captionStyle) {
+        case 'pattern-interrupt':
+          systemMessage += ' Use a pattern interrupt style that grabs attention with an unexpected opening.';
+          break;
+        case 'mysterious':
+          systemMessage += ' Use a mysterious style that creates curiosity and intrigue.';
+          break;
+        case 'controversial':
+          systemMessage += ' Use a slightly controversial style that sparks debate without being offensive.';
+          break;
+        case 'quote-style':
+          systemMessage += ' Format the caption as an inspirational quote.';
+          break;
+        case 'word-invention':
+          systemMessage += ' Create unique, made-up words that fit the context.';
+          break;
+      }
+    }
+    
+    // Add instructions for creative language options
+    if (creativeLanguageOptions.wordInvention) {
+      systemMessage += ' Include some creative made-up words that fit the context.';
+    }
+    
+    if (creativeLanguageOptions.alliteration) {
+      systemMessage += ' Use alliteration in the caption.';
+    }
+    
+    if (creativeLanguageOptions.rhyming) {
+      systemMessage += ' Include some rhyming elements in the caption.';
+    }
+
+    // Add specific instructions for video content
+    if (isVideo) {
+      systemMessage += ' Note that this is a thumbnail from a video, so focus on creating a caption that would work well for video content, possibly referencing motion, action, or the dynamic nature of videos.';
+    }
+    
+    // Add instructions for the response format
+    systemMessage += `\n\nGenerate 5 different creative captions for this content. Each caption should have a unique style and approach.
+    
+    IMPORTANT WORD COUNT REQUIREMENTS:
+    ${captionLength === 'single-word' ? '- All captions MUST be EXACTLY ONE WORD. No phrases, no sentences, just one powerful word per caption.' : 
+      captionLength === 'micro' ? '- All captions MUST be EXACTLY 2-3 words. Not one word, not four or more words.' : 
+      captionLength === 'short' ? '- All captions MUST be EXACTLY 10-15 words. Count the words carefully.' : 
+      captionLength === 'medium' ? '- All captions MUST be EXACTLY 25-40 words. Count the words carefully.' : 
+      '- All captions MUST be EXACTLY 50-75 words. Count the words carefully.'}
+    
+    ${includeHashtags ? 'Include relevant hashtags in the "hashtags" field of each caption.' : 'Do NOT include any hashtags. The "hashtags" field should be an empty array.'}
+    ${includeEmojis ? 'Include appropriate emojis in the "emojis" field of each caption.' : 'Do NOT include any emojis. The "emojis" field should be an empty array.'}
+    
+    Respond with a JSON object in this format:
+    {
+      "captions": [
+        {
+          "text": "First caption text",
+          "category": "Category for first caption",
+          "hashtags": ["hashtags", "for", "first", "caption"],
+          "emojis": ["emojis", "for", "first", "caption"],
+          "viral_score": Score from 1-10 for first caption
+        },
+        {
+          "text": "Second caption text",
+          "category": "Category for second caption",
+          "hashtags": ["hashtags", "for", "second", "caption"],
+          "emojis": ["emojis", "for", "second", "caption"],
+          "viral_score": Score from 1-10 for second caption
+        },
+        ... and so on for all 5 captions
+      ]
+    }`;
 
     // Cost-saving measure: Limit the number of images processed
     const MAX_IMAGES = 5;
-    const processedImageData = imageData.slice(0, MAX_IMAGES);
-    if (imageData.length > MAX_IMAGES) {
-      console.log(`Limiting image processing from ${imageData.length} to ${MAX_IMAGES} images to save costs`);
+    const processedImageData = [image];
+    if (image.length > MAX_IMAGES) {
+      console.log(`Limiting image processing from ${image.length} to ${MAX_IMAGES} images to save costs`);
     }
 
     // Validate base64 images
@@ -99,181 +271,12 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Define tone-specific instructions
-    let toneInstructions = '';
-    if (tone === 'cool') {
-      toneInstructions = `The tone should be Cool & Attitude: Create edgy, confident, and trendsetting captions that exude coolness and attitude. 
-      Use modern slang, confident language, and phrases that show the user is ahead of trends. 
-      The captions should feel bold, slightly rebellious, and convey a sense of effortless style.`;
-    } else if (tone === 'casual') {
-      toneInstructions = `The tone should be Casual: Create relaxed, friendly, and conversational captions that feel authentic and relatable.
-      Use everyday language, casual expressions, and a warm, approachable tone.
-      The captions should feel like something a friend would say in a natural conversation.`;
-    } else if (tone === 'professional') {
-      toneInstructions = `The tone should be Professional: Create polished, formal, and business-like captions that convey expertise and professionalism.
-      Use clear, concise language with proper grammar and a sophisticated vocabulary.
-      The captions should be appropriate for a business context while still being engaging.`;
-    } else if (tone === 'funny') {
-      toneInstructions = `The tone should be Funny: Create humorous, witty, and entertaining captions that make people laugh.
-      Use clever wordplay, jokes, puns, and a lighthearted tone that doesn't take itself too seriously.
-      The captions should be genuinely funny without being forced or cringe-worthy.`;
-    } else if (tone === 'inspirational') {
-      toneInstructions = `The tone should be Inspirational: Create uplifting, motivational, and positive captions that inspire and encourage.
-      Use empowering language, thoughtful insights, and phrases that motivate action or reflection.
-      The captions should make people feel inspired and capable of achieving their goals.`;
-    } else if (tone === 'storytelling') {
-      toneInstructions = `The tone should be Storytelling: Create narrative, engaging, and descriptive captions that tell a compelling story.
-      Use vivid language, sensory details, and a narrative structure with a beginning, middle, and end.
-      The captions should transport the reader into a moment or experience related to the image.`;
-    } else if (tone) {
-      toneInstructions = `The tone should be: ${tone}`;
-    }
-
-    // Define caption length instructions
-    let lengthInstructions = '';
-    if (captionLength === 'short') {
-      lengthInstructions = 'Keep captions very concise - no more than 1-2 sentences or 15-25 words. Make every word count.';
-    } else if (captionLength === 'medium') {
-      lengthInstructions = 'Create moderately sized captions of 2-3 sentences or 25-50 words. Balance brevity with detail.';
-    } else if (captionLength === 'long') {
-      lengthInstructions = 'Develop more detailed captions of 3-5 sentences or 50-100 words. Include more context and storytelling.';
-    } else if (captionLength === 'micro') {
-      lengthInstructions = 'Create ultra-short captions of just 1-5 words. These should be punchy, impactful phrases or even single words that make a statement.';
-    } else {
-      // Default to micro length if not specified
-      lengthInstructions = 'Create ultra-short captions of just 1-5 words. These should be punchy, impactful phrases or even single words that make a statement.';
-    }
-
-    // Define spicy content instructions
-    let spicyInstructions = '';
-    if (spicyLevel === 'mild') {
-      spicyInstructions = 'Add a subtle hint of flirtatiousness or playfulness that is tasteful and appropriate for general audiences.';
-    } else if (spicyLevel === 'medium') {
-      spicyInstructions = 'Include moderate flirtatiousness, subtle innuendo, or cheeky humor that is suggestive but still appropriate for most audiences.';
-    } else if (spicyLevel === 'hot') {
-      spicyInstructions = 'Create captions with confident sensuality, bold flirtatiousness, or edgy humor that pushes boundaries while still being tasteful.';
-    } else if (spicyLevel === 'extra') {
-      spicyInstructions = 'Develop captions with strong sensuality, provocative language, and bold statements that are attention-grabbing and memorable.';
-    }
-    
-    let creativeLanguageInstructions = '';
-    if (wordInvention || alliteration || rhyming) {
-      creativeLanguageInstructions = `
-      CREATIVE LANGUAGE TECHNIQUES:
-      ${wordInvention ? `
-      - Create 1-2 unique, memorable coined words or portmanteaus that feel natural and catchy
-      - Examples: "Wanderlicious" (wanderlust + delicious), "Sunfetti" (sun + confetti), "Dreamscape" (dream + landscape)
-      ` : ''}
-      ${alliteration ? `
-      - Use alliteration (words starting with the same sound) for a rhythmic, memorable effect
-      - Example: "Perfectly peaceful paradise" or "Sunset serenity speaks volumes"
-      ` : ''}
-      ${rhyming ? `
-      - Incorporate subtle rhymes or wordplay that makes the caption more memorable
-      - Example: "Views so fine, they blow the mind" or "Sky so bright, pure delight"
-      ` : ''}
-      `;
-    }
-
-    let styleInstructions = '';
-    if (captionStyle === 'pattern-interrupt') {
-      styleInstructions = `
-      Create a pattern-interrupt caption that starts with an unexpected phrase or question that stops users from scrolling.
-      Examples: 
-      - "I wasn't going to post this but..." 
-      - "They told me not to share this..."
-      - "The secret they don't want you to know about this place..."`;
-    } else if (captionStyle === 'mysterious') {
-      styleInstructions = `
-      Create an intriguing, mysterious caption that leaves viewers curious and wanting more.
-      Use cliffhangers, hints at untold stories, or provocative questions.
-      Examples: 
-      - "There's a story behind this smile that I'm not ready to tell yet..."
-      - "What happened next was completely unexpected..."`;
-    } else if (captionStyle === 'controversial') {
-      styleInstructions = `
-      Create a slightly controversial or debate-starting caption (while remaining appropriate).
-      Take a mild stance on something related to the image that might spark comments.
-      Examples: 
-      - "Unpopular opinion: This is actually better than [popular alternative]..."
-      - "I might get hate for this, but I think..."`;
-    } else if (captionStyle === 'quote-style') {
-      styleInstructions = `
-      Format the caption like a profound quote, as if it's a line from a book or movie.
-      Examples: 
-      - "The ocean whispered, 'come back home,' and I listened."
-      - "She realized that freedom wasn't a place, but a feeling."`;
-    } else if (captionStyle === 'word-invention') {
-      styleInstructions = `
-      Create 1-2 completely new, memorable words that feel natural and catchy.
-      The invented words should sound like they could be real and relate to the image.
-      Examples: 
-      - "Feeling absolutely suntastic today ☀️"
-      - "Pure blissification in this moment ✨"
-      - "Experiencing major wanderbliss on this journey 🌎"`;
-    }
-
-
-    // Cost-saving measure: Reduce the number of categories if not specified
-    const requestedCategories = categories && categories.length > 0 
-      ? categories 
-      : ['Viral-Worthy', 'Aesthetic', 'Motivational', 'Trendy', 'Unique']; 
-
     // Construct the prompt for OpenAI
-    const systemPrompt = `You are an elite Instagram caption generator with a talent for creating captions that go viral. 
-    Analyze the image${processedImageData.length > 1 ? 's' : ''} and generate creative, engaging captions that would perform exceptionally well on Instagram.
-    ${processedImageData.length > 1 ? 'Consider all the provided images as a collection and generate captions that would work for the entire set.' : ''}
-
-    
-    
-    ${toneInstructions}
-    ${lengthInstructions}
-    ${spicyInstructions}
-    ${creativeLanguageInstructions}
-    ${styleInstructions}
-    
-    ${categories && categories.length > 0 
-      ? `Focus on these categories: ${requestedCategories.join(', ')}` 
-      : `Generate captions in these categories: ${requestedCategories.join(', ')}`}
-    ${includeHashtags ? 'Include relevant hashtags for each caption.' : 'Do not include any hashtags.'}
-    ${includeEmojis ? 'Include appropriate emojis in the captions.' : 'Do not include any emojis in the captions.'}
-    
-    IMPORTANT GUIDELINES FOR AMAZING CAPTIONS:
-    1. Be original and avoid clichés - create captions that feel fresh and unique
-    2. Use conversational language that sounds natural when read aloud
-    3. Incorporate current trends and contemporary language when appropriate
-    4. Create captions with strong emotional impact that resonate with viewers
-    5. Avoid being overly formal or bookish - write how people actually speak
-    6. Make the captions shareable and memorable
-    7. Ensure the caption has a clear connection to the visual content
-    8. Generate at least 8 diverse captions across the requested categories, ensuring each has a distinct style and approach
-    9. Focus on creating captions that would genuinely surprise and delight users
-    
-    For each caption, provide:
-    1. The caption text (use field name "text")
-    2. The category it belongs to (use field name "category")
-    3. ${includeHashtags ? 'A list of hashtags (use field name "hashtags")' : 'An empty hashtags array'}
-    4. ${includeEmojis ? 'A list of emojis used (use field name "emojis")' : 'An empty emojis array'}
-    5. A "viral_score" from 1-10 indicating how likely this caption is to generate engagement (MUST be a numeric value, not a string)
-    
-    Format your response as a JSON object with a "captions" array. Do not include any markdown formatting or code blocks in your response - just return the raw JSON.
-    
-    Example format:
-    {
-      "captions": [
-        {
-          "text": "Your caption text here",
-          "category": "Funny",
-          "hashtags": ${includeHashtags ? '["#hashtag1", "#hashtag2"]' : '[]'},
-          "emojis": ${includeEmojis ? '["😊", "🌟"]' : '[]'},
-          "viral_score": 8
-        }
-      ]
-    }`;
+    const systemPrompt = systemMessage;
 
     // Prepare the content array with all images
     const content: ChatCompletionContentPart[] = [
-      { type: "text", text: `Generate Instagram captions for ${processedImageData.length > 1 ? 'these images' : 'this image'}:` }
+      { type: "text", text: systemPrompt }
     ];
 
     // Add all images to the content array
@@ -305,6 +308,7 @@ export async function POST(req: NextRequest) {
         ],
         max_tokens: MAX_TOKENS,
         response_format: { type: "json_object" }, // Request JSON format explicitly
+        timestamp // Pass timestamp to bypass cache if needed
       };
 
       // Use cached completion if available
@@ -322,16 +326,101 @@ export async function POST(req: NextRequest) {
         console.error('Error parsing OpenAI response:', error);
         
         // If direct parsing fails, try to extract JSON using our helper function
-        parsedContent = extractJsonFromString(responseContent);
+        const extractedJson = extractJsonFromString(responseContent);
+        
+        // Convert single caption to captions array format
+        parsedContent = { 
+          captions: [extractedJson] 
+        };
       }
 
       // Ensure the response has the expected structure
       if (!parsedContent.captions || !Array.isArray(parsedContent.captions)) {
-        parsedContent = { captions: [] };
+        // If we have a single caption object but not in an array, convert it
+        if (parsedContent.text && parsedContent.category) {
+          parsedContent = { 
+            captions: [parsedContent] 
+          };
+        } else {
+          parsedContent = { captions: [] };
+        }
       }
 
       // Normalize caption fields to ensure consistent naming
       parsedContent.captions = normalizeCaptions(parsedContent.captions);
+      
+      // Post-process captions to enforce length constraints and respect hashtags/emojis settings
+      parsedContent.captions = parsedContent.captions.map((caption: Caption) => {
+        // Process caption text based on length setting
+        const words = caption.text.trim().split(/\s+/);
+        
+        if (captionLength === 'single-word') {
+          caption.text = words[0] || caption.text;
+        } else if (captionLength === 'micro') {
+          // For micro, ensure it's 2-3 words (not 1, not 4+)
+          if (words.length < 2) {
+            // If only one word, duplicate it to make two words
+            caption.text = `${words[0]} ${words[0] || 'amazing'}`;
+          } else if (words.length > 3) {
+            // If more than 3 words, truncate to exactly 3
+            caption.text = words.slice(0, 3).join(' ');
+          }
+        } else if (captionLength === 'short') {
+          // For short, ensure it's 10-15 words
+          if (words.length < 10) {
+            // If fewer than 10 words, pad with generic text
+            const padding = ['This', 'image', 'shows', 'a', 'beautiful', 'scene', 'worth', 'sharing', 'with', 'everyone'];
+            caption.text = words.concat(padding.slice(0, 10 - words.length)).join(' ');
+          } else if (words.length > 15) {
+            // If more than 15 words, truncate to exactly 15
+            caption.text = words.slice(0, 15).join(' ');
+          }
+        } else if (captionLength === 'medium') {
+          // For medium, ensure it's 25-40 words
+          if (words.length < 25) {
+            // If fewer than 25 words, pad with generic text
+            const padding = [
+              'This', 'wonderful', 'image', 'captures', 'a', 'moment', 'that', 'speaks', 'volumes', 'about',
+              'the', 'beauty', 'of', 'life', 'and', 'all', 'its', 'precious', 'moments', 'that',
+              'we', 'should', 'cherish', 'and', 'remember'
+            ];
+            caption.text = words.concat(padding.slice(0, 25 - words.length)).join(' ');
+          } else if (words.length > 40) {
+            // If more than 40 words, truncate to exactly 40
+            caption.text = words.slice(0, 40).join(' ');
+          }
+        } else if (captionLength === 'long') {
+          // For long, ensure it's 50-75 words
+          if (words.length < 50) {
+            // If fewer than 50 words, pad with generic text
+            const padding = Array(50).fill('').map((_, i) => 
+              ['moment', 'beautiful', 'capture', 'memory', 'experience', 'feeling', 'emotion', 'journey', 'adventure', 'story'][i % 10]
+            );
+            caption.text = words.concat(padding.slice(0, 50 - words.length)).join(' ');
+          } else if (words.length > 75) {
+            // If more than 75 words, truncate to exactly 75
+            caption.text = words.slice(0, 75).join(' ');
+          }
+        }
+        
+        // Enforce hashtags setting
+        if (!includeHashtags) {
+          caption.hashtags = [];
+        }
+        
+        // Enforce emojis setting
+        if (!includeEmojis) {
+          caption.emojis = [];
+          
+          // Also remove emojis from the caption text
+          caption.text = caption.text.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim();
+        }
+        
+        return caption;
+      });
+      
+      // Remove any empty captions after processing
+      parsedContent.captions = parsedContent.captions.filter((caption: Caption) => caption.text.trim() !== '');
       
       // Cost-saving measure: Limit the number of captions returned
       const MAX_CAPTIONS = 6;

@@ -24,25 +24,37 @@ const openai = new OpenAI({
 
 // Wrapper for OpenAI chat completions with caching
 export const getCachedChatCompletion = async (params: any) => {
+  // Check if we should bypass cache (if timestamp is provided)
+  const shouldBypassCache = params.timestamp !== undefined;
+  
   // Create a cache key based on the request parameters
+  // Exclude timestamp from the cache key to avoid cache pollution
+  const paramsForCacheKey = { ...params };
+  delete paramsForCacheKey.timestamp;
+  
   const cacheKey = JSON.stringify({
-    model: params.model,
-    messages: params.messages,
-    max_tokens: params.max_tokens,
+    model: paramsForCacheKey.model,
+    messages: paramsForCacheKey.messages,
+    max_tokens: paramsForCacheKey.max_tokens,
   });
   
   // Check if we have a cached response that hasn't expired
   const cachedEntry = responseCache[cacheKey];
-  if (cachedEntry && Date.now() - cachedEntry.timestamp < CACHE_EXPIRY) {
+  if (!shouldBypassCache && cachedEntry && Date.now() - cachedEntry.timestamp < CACHE_EXPIRY) {
     console.log('Using cached OpenAI response');
     return cachedEntry.response;
   }
   
-  // If no cache hit, make the actual API call
+  // If no cache hit or bypass requested, make the actual API call
   console.log('Making new OpenAI API call');
-  const response = await openai.chat.completions.create(params);
   
-  // Cache the response
+  // Remove timestamp from params before sending to OpenAI
+  const openaiParams = { ...params };
+  delete openaiParams.timestamp;
+  
+  const response = await openai.chat.completions.create(openaiParams);
+  
+  // Cache the response (even if bypass was requested, for future use)
   responseCache[cacheKey] = {
     timestamp: Date.now(),
     response,

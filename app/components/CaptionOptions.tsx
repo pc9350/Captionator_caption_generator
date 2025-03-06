@@ -23,10 +23,11 @@ export default function CaptionOptions() {
   } = useCaptionStore();
 
   const lengthOptions = [
-    { value: 'micro' as CaptionLength, label: 'Micro', description: '1-5 words' },
-    { value: 'short' as CaptionLength, label: 'Short', description: '15-25 words' },
-    { value: 'medium' as CaptionLength, label: 'Medium', description: '25-50 words' },
-    { value: 'long' as CaptionLength, label: 'Long', description: '50-100 words' },
+    { value: 'single-word' as CaptionLength, label: 'Single Word', description: 'Just one word' },
+    { value: 'micro' as CaptionLength, label: 'Micro', description: '2-3 words' },
+    { value: 'short' as CaptionLength, label: 'Short', description: '10-15 words' },
+    { value: 'medium' as CaptionLength, label: 'Medium', description: '25-40 words' },
+    { value: 'long' as CaptionLength, label: 'Long', description: '50-75 words' },
   ];
 
   const spicyOptions = [
