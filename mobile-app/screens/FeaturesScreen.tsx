@@ -14,6 +14,7 @@ import { useNavigation, CommonActions } from '@react-navigation/native';
 import LottieView from 'lottie-react-native';
 import Header from '../components/Header';
 import FooterNavbar from '../components/FooterNavbar';
+import AnimatedButton from '../components/AnimatedButton';
 
 const { width } = Dimensions.get('window');
 
@@ -63,14 +64,26 @@ const FeaturesScreen = () => {
   const navigateToAuth = () => {
     navigation.dispatch(
       CommonActions.navigate({
-        name: 'Auth' as never,
+        name: 'Auth'
+      })
+    );
+  };
+  
+  const handleBackNavigation = () => {
+    // Navigate to Home screen explicitly instead of using goBack()
+    navigation.dispatch(
+      CommonActions.navigate({
+        name: 'Home'
       })
     );
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header title="Features" />
+      <Header 
+        title="Features" 
+        customBackAction={handleBackNavigation}
+      />
       
       <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
         <Text style={styles.heading}>Powerful Features</Text>
@@ -102,12 +115,13 @@ const FeaturesScreen = () => {
           <Text style={styles.ctaSubtitle}>
             Create your free account and start generating amazing captions today.
           </Text>
-          <TouchableOpacity 
-            style={styles.ctaButton}
+          <AnimatedButton
+            title="Sign Up Free"
             onPress={navigateToAuth}
-          >
-            <Text style={styles.ctaButtonText}>Sign Up Free</Text>
-          </TouchableOpacity>
+            primary={true}
+            icon="person-add-outline"
+            size="medium"
+          />
         </View>
       </ScrollView>
       
@@ -201,22 +215,6 @@ const styles = StyleSheet.create({
     color: '#c7d2fe',
     marginBottom: 24,
     textAlign: 'center',
-  },
-  ctaButton: {
-    backgroundColor: 'white',
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  ctaButtonText: {
-    color: '#4338ca',
-    fontWeight: '600',
-    fontSize: 16,
   },
 });
 

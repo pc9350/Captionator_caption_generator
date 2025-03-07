@@ -1,23 +1,40 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform, StatusBar } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, CommonActions } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
 interface HeaderProps {
   title: string;
   showBackButton?: boolean;
   rightComponent?: React.ReactNode;
+  customBackAction?: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({ 
   title, 
   showBackButton = true,
-  rightComponent
+  rightComponent,
+  customBackAction
 }) => {
   const navigation = useNavigation();
 
   const handleGoBack = () => {
-    navigation.goBack();
+    if (customBackAction) {
+      customBackAction();
+      return;
+    }
+    
+    // Check if we can go back
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      // If we can't go back, navigate to Home as a fallback
+      navigation.dispatch(
+        CommonActions.navigate({
+          name: 'Home'
+        })
+      );
+    }
   };
 
   return (
@@ -54,6 +71,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 15,
     elevation: 2,
+    zIndex: 10, // Ensure header is above other elements
   },
   content: {
     flexDirection: 'row',

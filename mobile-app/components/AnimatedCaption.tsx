@@ -6,6 +6,10 @@ interface AnimatedCaptionProps {
   typingSpeed?: number;
   pauseDuration?: number;
   deletingSpeed?: number;
+  textColor?: string;
+  fontSize?: number;
+  showCursor?: boolean;
+  style?: any;
 }
 
 const AnimatedCaption: React.FC<AnimatedCaptionProps> = ({ 
@@ -17,7 +21,11 @@ const AnimatedCaption: React.FC<AnimatedCaptionProps> = ({
   ], 
   typingSpeed = 50,
   pauseDuration = 2000,
-  deletingSpeed = 30
+  deletingSpeed = 30,
+  textColor = '#ffffff',
+  fontSize = 14,
+  showCursor = true,
+  style
 }) => {
   const [displayedText, setDisplayedText] = useState('');
   const [currentCaptionIndex, setCurrentCaptionIndex] = useState(0);
@@ -35,6 +43,8 @@ const AnimatedCaption: React.FC<AnimatedCaptionProps> = ({
   
   // Start blinking animation
   useEffect(() => {
+    if (!showCursor) return;
+    
     const blinkAnimation = Animated.loop(
       Animated.sequence([
         Animated.timing(cursorOpacity, {
@@ -55,7 +65,7 @@ const AnimatedCaption: React.FC<AnimatedCaptionProps> = ({
     return () => {
       blinkAnimation.stop();
     };
-  }, [cursorOpacity]);
+  }, [cursorOpacity, showCursor]);
   
   // Update refs when state changes
   useEffect(() => {
@@ -110,18 +120,52 @@ const AnimatedCaption: React.FC<AnimatedCaptionProps> = ({
     return () => clearInterval(typingInterval);
   }, [captions, typingSpeed, pauseDuration, deletingSpeed]);
 
-  return (
-    <View style={styles.container}>
-      <View style={styles.captionContainer}>
-        <Text style={styles.caption}>
-          {displayedText}
+  // Process text to highlight hashtags
+  const renderText = () => {
+    const words = displayedText.split(' ');
+    return words.map((word, index) => {
+      if (word.startsWith('#')) {
+        return (
+          <Text key={index} style={styles.hashtag}>
+            {word}{index < words.length - 1 ? ' ' : ''}
+          </Text>
+        );
+      }
+      return (
+        <Text key={index} style={{ color: textColor }}>
+          {word}{index < words.length - 1 ? ' ' : ''}
         </Text>
-        <Animated.View 
-          style={[
-            styles.cursor, 
-            { opacity: cursorOpacity }
-          ]} 
-        />
+      );
+    });
+  };
+
+  return (
+    <View style={[styles.container, style]}>
+      <View style={styles.captionContainer}>
+        <Text style={[
+          styles.caption, 
+          { 
+            fontSize, 
+            color: textColor,
+            textShadowColor: 'rgba(0, 0, 0, 0.5)',
+            textShadowOffset: { width: 1, height: 1 },
+            textShadowRadius: 3,
+          }
+        ]}>
+          {renderText()}
+        </Text>
+        {showCursor && (
+          <Animated.View 
+            style={[
+              styles.cursor, 
+              { 
+                opacity: cursorOpacity,
+                height: fontSize + 2,
+                backgroundColor: textColor
+              }
+            ]} 
+          />
+        )}
       </View>
     </View>
   );
@@ -136,15 +180,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   caption: {
-    fontSize: 14,
-    color: '#4b5563',
     lineHeight: 20,
+    flexShrink: 1,
+    flexWrap: 'wrap',
   },
   cursor: {
     width: 2,
-    height: 16,
-    backgroundColor: '#6366f1',
     marginLeft: 2,
+  },
+  hashtag: {
+    color: '#a5b4fc',
+    fontWeight: '600',
   },
 });
 
