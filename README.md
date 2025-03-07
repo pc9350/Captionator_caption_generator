@@ -1,22 +1,35 @@
-# Captionator - AI-Powered Instagram Caption Generator
+# Captionator - AI-Powered Caption Generator for Images & Videos
 
-Captionator is a modern web application that uses AI to generate engaging and creative captions for your posts. Simply upload an image, select a tone, and get multiple caption options tailored to your content.
+Captionator is a modern web application that uses AI to generate engaging and creative captions for your social media posts. Simply upload an image or video, select a tone, and get multiple caption options tailored to your content.
+
+![Captionator Demo](public/demo/captionator-demo.png)
 
 ## Features
 
-- **AI-Powered Caption Generation**: Leverages OpenAI to create contextually relevant captions based on your images
+- **AI-Powered Caption Generation**: Leverages OpenAI to create contextually relevant captions based on your images and videos
+- **Video Support**: Generate captions for both images and videos
+- **Multiple Caption Lengths**: Choose from single-word, micro, short, medium, or long captions
 - **Multiple Tone Options**: Choose from casual, professional, funny, inspirational, or storytelling tones
+- **Customizable Options**: Toggle hashtags and emojis on/off as needed
 - **Save Favorite Captions**: Save your favorite captions for later use
 - **Caption History**: View your past caption generations
 - **User Authentication**: Secure user accounts with Firebase Authentication
 - **Responsive Design**: Works seamlessly on mobile, tablet, and desktop devices
 - **Dark Mode Support**: Comfortable viewing in any lighting condition
 
+## Demo
+
+### Image Caption Generation
+![Image Caption Demo](public/demo/image-caption-demo.png)
+
+### Video Caption Generation
+![Video Caption Demo](public/demo/video-caption-demo.png)
+
 ## Tech Stack
 
 - **Frontend**: Next.js 14, React, Tailwind CSS, Framer Motion
 - **Backend**: Next.js API Routes
-- **AI**: OpenAI API
+- **AI**: OpenAI API (GPT-4o Vision)
 - **Authentication**: Firebase Authentication
 - **Database**: Firebase Firestore
 - **Storage**: Firebase Storage
@@ -34,7 +47,7 @@ Captionator is a modern web application that uses AI to generate engaging and cr
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/captionator.git
+   git clone https://github.com/pc9350/Captionator_caption_generator.git
    cd captionator
    ```
 
@@ -72,11 +85,12 @@ Captionator is a modern web application that uses AI to generate engaging and cr
 ## Usage
 
 1. Sign up or log in to your account
-2. Upload an image from your device
-3. Select a tone for your caption
-4. Click "Generate Captions" to get AI-generated captions
-5. Copy, save, or regenerate captions as needed
-6. View your saved captions or caption history in the respective sections
+2. Upload an image or video from your device
+3. Select caption length and tone preferences
+4. Toggle hashtags and emojis on/off as needed
+5. Click "Generate Captions" to get AI-generated captions
+6. Copy, save, or regenerate captions as needed
+7. View your saved captions in the Saved section
 
 ## License
 

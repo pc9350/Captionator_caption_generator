@@ -418,11 +418,11 @@ export default function ImageUploader() {
               </motion.div>
                 <h3 className="text-2xl font-bold mb-3">
                   {isDragActive
-                    ? "Drop your images here"
-                    : "Drag & Drop your images"}
+                    ? "Drop your media here"
+                    : "Drag & Drop your media"}
               </h3>
                 <p className="text-white/70 text-center max-w-md mb-6">
-                  Upload high-quality images to generate Instagram captions that
+                  Upload high-quality images or videos to generate captions that
                   match your content perfectly
               </p>
               <motion.button
@@ -438,10 +438,10 @@ export default function ImageUploader() {
                   }}
                 whileTap={{ scale: 0.95 }}
               >
-                  Select Images
+                  Select Media
               </motion.button>
                 <div className="mt-6 flex items-center text-white/60 text-sm">
-                  <FiImage className="mr-2" /> Supports JPG, PNG, GIF, WEBP
+                  <FiImage className="mr-2" /> Supports JPG, PNG, GIF, WEBP, MP4, WEBM, MOV, AVI
                 </div>
             </motion.div>
           ) : isUploading ? (
