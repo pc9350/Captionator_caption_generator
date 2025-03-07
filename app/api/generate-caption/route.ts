@@ -11,115 +11,142 @@ interface JsonResponse {
   viral_score?: number;
 }
 
-// Helper function to extract JSON from a string that might contain markdown formatting
-const extractJsonFromString = (str: string): JsonResponse => {
+// Helper function to extract JSON from a string that might contain additional text
+function extractJsonFromString(str: string): any {
   try {
-    // Find the start and end of the JSON object
-    const start = str.indexOf('{');
-    const end = str.lastIndexOf('}');
-    
-    if (start === -1 || end === -1 || start > end) {
-      throw new Error('No valid JSON object found in the string');
+    // First, try direct JSON parsing
+    return JSON.parse(str);
+  } catch (e) {
+    // If direct parsing fails, try to extract JSON from the string
+    try {
+      // Look for JSON object pattern
+      const jsonPattern = /{[\s\S]*}/;
+      const match = str.match(jsonPattern);
+      
+      if (match && match[0]) {
+        // Try to parse the extracted JSON
+        const extractedJson = JSON.parse(match[0]);
+        
+        // Validate the extracted JSON structure
+        if (extractedJson) {
+          // If we have a captions array, return it directly
+          if (Array.isArray(extractedJson.captions)) {
+            return extractedJson;
+          }
+          
+          // If we have a single caption object with text field, wrap it in a captions array
+          if (extractedJson.text) {
+            return {
+              captions: [validateCaptionFields(extractedJson)]
+            };
+          }
+          
+          // If we have a captions field but it's not an array, validate and wrap it
+          if (extractedJson.captions && !Array.isArray(extractedJson.captions)) {
+            return {
+              captions: [validateCaptionFields(extractedJson.captions)]
+            };
+          }
+          
+          // For any other structure, return the extracted JSON as is
+          return extractedJson;
+        }
+      }
+      
+      // If no valid JSON object was found, try to extract multiple JSON objects
+      const jsonObjects = str.match(/{[\s\S]*?}/g);
+      if (jsonObjects && jsonObjects.length > 0) {
+        // Try each extracted object until we find a valid one
+        for (const jsonObj of jsonObjects) {
+          try {
+            const parsed = JSON.parse(jsonObj);
+            if (parsed && (parsed.text || parsed.captions)) {
+              // If we found a valid caption object or captions array
+              if (parsed.captions) {
+                return parsed;
+              } else if (parsed.text) {
+                return {
+                  captions: [validateCaptionFields(parsed)]
+                };
+              }
+            }
+          } catch (parseError) {
+            // Continue to the next object if parsing fails
+            continue;
+          }
+        }
+      }
+    } catch (extractError) {
+      console.error('Error extracting JSON:', extractError);
     }
     
-    // Extract and parse the JSON object
-    const jsonStr = str.slice(start, end + 1);
-    const parsedJson = JSON.parse(jsonStr);
-    
-    // If we have a captions array, return the first one
-    if (parsedJson.captions && Array.isArray(parsedJson.captions) && parsedJson.captions.length > 0) {
-      return parsedJson.captions[0];
-    }
-    
-    // If we have a text field, assume it's a caption object
-    if (parsedJson.text) {
-      // Ensure all required fields are present
-      return {
-        text: parsedJson.text,
-        category: parsedJson.category || 'General',
-        hashtags: Array.isArray(parsedJson.hashtags) ? parsedJson.hashtags : [],
-        emojis: Array.isArray(parsedJson.emojis) ? parsedJson.emojis : [],
-        viral_score: typeof parsedJson.viral_score === 'number' ? parsedJson.viral_score : 5
-      };
-    }
-    
-    // Otherwise return the parsed JSON as is
-    return parsedJson;
-  } catch (error) {
-    console.error('Error extracting JSON:', error);
-    // Try to extract any text that looks like a caption
-    const textMatch = str.match(/["']text["']\s*:\s*["']([^"']+)["']/i);
-    if (textMatch && textMatch[1]) {
-      return {
-        text: textMatch[1],
-        category: 'General',
-        viral_score: 5 // Default to 5 for consistency
-      };
-    }
-    
+    // If all extraction attempts fail, return a fallback object
     return {
-      text: str.length > 100 ? str.substring(0, 100) + '...' : str,
-      category: 'General',
-      viral_score: 5 // Default to 5 for consistency
+      captions: [
+        {
+          text: "Unable to generate a proper caption. Please try again.",
+          category: "Error",
+          hashtags: [],
+          emojis: [],
+          viral_score: 5
+        }
+      ]
     };
   }
-};
+}
 
-// Helper function to normalize caption fields
-const normalizeCaptions = (captions: JsonResponse[]): Caption[] => {
-  // Filter out any null or undefined captions
-  return captions.filter(caption => caption && typeof caption === 'object').map(caption => {
-    // Ensure viral_score is a number between 1-10
-    let viralScore = 5; // Default value
-    
-    if (caption.viral_score !== undefined) {
-      // Convert to number if it's a string
-      const scoreValue = typeof caption.viral_score === 'string' 
-        ? parseFloat(caption.viral_score) 
-        : caption.viral_score;
-        
-      // Validate it's a number and in range
-      if (!isNaN(scoreValue) && scoreValue >= 1 && scoreValue <= 10) {
-        viralScore = scoreValue;
-      }
-    }
-    
-    // Ensure hashtags is an array
-    let hashtags: string[] = [];
-    if (caption.hashtags) {
-      if (Array.isArray(caption.hashtags)) {
-        hashtags = caption.hashtags as string[];
-      } else if (typeof caption.hashtags === 'string') {
-        // If hashtags is a string, try to split it
-        hashtags = (caption.hashtags as string).split(/\s+/).filter((tag: string) => tag.startsWith('#'));
-      }
-    }
-    
-    // Ensure emojis is an array
-    let emojis: string[] = [];
-    if (caption.emojis) {
-      if (Array.isArray(caption.emojis)) {
-        emojis = caption.emojis as string[];
-      } else if (typeof caption.emojis === 'string') {
-        // If emojis is a string, convert to array of characters
-        emojis = Array.from(caption.emojis as string);
-      }
-    }
-    
-    // Generate a unique ID for the caption
-    const id = `caption-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-    
-    return {
-      id,
-      text: caption.text || '',
-      category: caption.category || 'General',
-      hashtags: hashtags,
-      emojis: emojis,
-      viral_score: viralScore, // Use the processed viral score
-      createdAt: new Date()
+// Helper function to validate and provide defaults for caption fields
+function validateCaptionFields(caption: any): any {
+  return {
+    text: caption.text || "No caption text provided",
+    category: caption.category || "General",
+    hashtags: Array.isArray(caption.hashtags) ? caption.hashtags : [],
+    emojis: Array.isArray(caption.emojis) ? caption.emojis : [],
+    viral_score: typeof caption.viral_score === 'number' ? caption.viral_score : 5
+  };
+}
+
+// Helper function to normalize caption fields (ensure consistent naming)
+function normalizeCaptions(captions: any[]): any[] {
+  return captions.map(caption => {
+    // Create a normalized caption object with all required fields
+    const normalizedCaption = {
+      id: caption.id || `caption-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      text: caption.text || caption.caption || caption.content || "No caption text provided",
+      category: caption.category || caption.type || "General",
+      hashtags: [],
+      emojis: [],
+      viral_score: typeof caption.viral_score === 'number' ? caption.viral_score : 
+                  typeof caption.viralScore === 'number' ? caption.viralScore : 5,
+      createdAt: caption.createdAt || new Date()
     };
+    
+    // Handle hashtags with different possible field names and formats
+    if (Array.isArray(caption.hashtags)) {
+      normalizedCaption.hashtags = caption.hashtags;
+    } else if (Array.isArray(caption.tags)) {
+      normalizedCaption.hashtags = caption.tags;
+    } else if (typeof caption.hashtags === 'string') {
+      // If hashtags is a string, split it and clean up
+      normalizedCaption.hashtags = caption.hashtags
+        .split(/\s+/)
+        .filter((tag: string) => tag.trim() !== '')
+        .map((tag: string) => tag.startsWith('#') ? tag : `#${tag}`);
+    }
+    
+    // Handle emojis with different possible field names
+    if (Array.isArray(caption.emojis)) {
+      normalizedCaption.emojis = caption.emojis;
+    } else if (Array.isArray(caption.emoji)) {
+      normalizedCaption.emojis = caption.emoji;
+    } else if (typeof caption.emojis === 'string') {
+      // If emojis is a string, convert to array
+      normalizedCaption.emojis = Array.from(caption.emojis.trim());
+    }
+    
+    return normalizedCaption;
   });
-};
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -220,7 +247,7 @@ export async function POST(req: NextRequest) {
       systemMessage += ' Note that this is a thumbnail from a video, so focus on creating a caption that would work well for video content, possibly referencing motion, action, or the dynamic nature of videos.';
     }
     
-    // Add instructions for the response format
+    // Make the format requirements more explicit
     systemMessage += `\n\nGenerate 5 different creative captions for this content. Each caption should have a unique style and approach.
     
     IMPORTANT WORD COUNT REQUIREMENTS:
@@ -233,26 +260,21 @@ export async function POST(req: NextRequest) {
     ${includeHashtags ? 'Include relevant hashtags in the "hashtags" field of each caption.' : 'Do NOT include any hashtags. The "hashtags" field should be an empty array.'}
     ${includeEmojis ? 'Include appropriate emojis in the "emojis" field of each caption.' : 'Do NOT include any emojis. The "emojis" field should be an empty array.'}
     
-    Respond with a JSON object in this format:
+    You MUST respond with a valid JSON object in this EXACT format:
     {
       "captions": [
         {
           "text": "First caption text",
           "category": "Category for first caption",
-          "hashtags": ["hashtags", "for", "first", "caption"],
-          "emojis": ["emojis", "for", "first", "caption"],
-          "viral_score": Score from 1-10 for first caption
+          "hashtags": ["hashtag1", "hashtag2"],
+          "emojis": ["emoji1", "emoji2"],
+          "viral_score": 7
         },
-        {
-          "text": "Second caption text",
-          "category": "Category for second caption",
-          "hashtags": ["hashtags", "for", "second", "caption"],
-          "emojis": ["emojis", "for", "second", "caption"],
-          "viral_score": Score from 1-10 for second caption
-        },
-        ... and so on for all 5 captions
+        ... and so on for all captions
       ]
-    }`;
+    }
+
+    Do not include any explanations, markdown formatting, or additional text outside of this JSON structure.`;
 
     // Cost-saving measure: Limit the number of images processed
     const MAX_IMAGES = 5;
@@ -292,171 +314,172 @@ export async function POST(req: NextRequest) {
     // Cost-saving measure: Limit token usage
     const MAX_TOKENS = 1000; // Reduced from 1500
 
-    try {
-      // Call OpenAI API with the images using our caching mechanism
-      const params = {
-        model: "gpt-4o", // Using GPT-4o which has vision capabilities
-        messages: [
-          {
-            role: "system",
-            content: systemPrompt,
-          },
-          {
-            role: "user",
-            content: content,
-          },
-        ],
-        max_tokens: MAX_TOKENS,
-        response_format: { type: "json_object" }, // Request JSON format explicitly
-        timestamp // Pass timestamp to bypass cache if needed
-      };
+    // Create a promise that will reject after the timeout
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('OpenAI API request timed out')), 30000); // 30 second timeout
+    });
 
-      // Use cached completion if available
-      const response = await getCachedChatCompletion(params);
+    // Create the actual API call promise
+    const apiCallPromise = getCachedChatCompletion({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: systemPrompt,
+        },
+        {
+          role: "user",
+          content: content,
+        },
+      ],
+      max_tokens: MAX_TOKENS,
+      timestamp, // Pass timestamp to potentially bypass cache
+    });
 
-      // Parse the response
-      const responseContent = response.choices[0].message.content || '{"captions": []}';
-      
-      let parsedContent;
-      
-      try {
-        // Try direct JSON parsing first
-        parsedContent = JSON.parse(responseContent);
-      } catch (error) {
-        console.error('Error parsing OpenAI response:', error);
-        
-        // If direct parsing fails, try to extract JSON using our helper function
-        const extractedJson = extractJsonFromString(responseContent);
-        
-        // Convert single caption to captions array format
-        parsedContent = { 
-          captions: [extractedJson] 
+    // Race the API call against the timeout
+    const response = await Promise.race([apiCallPromise, timeoutPromise])
+      .catch(error => {
+        console.error('Error during OpenAI request:', error);
+        // Return a fallback response
+        return {
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  captions: [
+                    {
+                      text: error.message === 'OpenAI API request timed out' 
+                        ? "Request timed out. Please try again." 
+                        : "Unable to generate caption. Please try again.",
+                      category: "Error",
+                      hashtags: [],
+                      emojis: [],
+                      viral_score: 5
+                    }
+                  ]
+                })
+              }
+            }
+          ]
         };
-      }
-
-      // Ensure the response has the expected structure
-      if (!parsedContent.captions || !Array.isArray(parsedContent.captions)) {
-        // If we have a single caption object but not in an array, convert it
-        if (parsedContent.text && parsedContent.category) {
-          parsedContent = { 
-            captions: [parsedContent] 
-          };
-        } else {
-          parsedContent = { captions: [] };
-        }
-      }
-
-      // Normalize caption fields to ensure consistent naming
-      parsedContent.captions = normalizeCaptions(parsedContent.captions);
-      
-      // Post-process captions to enforce length constraints and respect hashtags/emojis settings
-      parsedContent.captions = parsedContent.captions.map((caption: Caption) => {
-        // Process caption text based on length setting
-        const words = caption.text.trim().split(/\s+/);
-        
-        if (captionLength === 'single-word') {
-          caption.text = words[0] || caption.text;
-        } else if (captionLength === 'micro') {
-          // For micro, ensure it's 2-3 words (not 1, not 4+)
-          if (words.length < 2) {
-            // If only one word, duplicate it to make two words
-            caption.text = `${words[0]} ${words[0] || 'amazing'}`;
-          } else if (words.length > 3) {
-            // If more than 3 words, truncate to exactly 3
-            caption.text = words.slice(0, 3).join(' ');
-          }
-        } else if (captionLength === 'short') {
-          // For short, ensure it's 10-15 words
-          if (words.length < 10) {
-            // If fewer than 10 words, pad with generic text
-            const padding = ['This', 'image', 'shows', 'a', 'beautiful', 'scene', 'worth', 'sharing', 'with', 'everyone'];
-            caption.text = words.concat(padding.slice(0, 10 - words.length)).join(' ');
-          } else if (words.length > 15) {
-            // If more than 15 words, truncate to exactly 15
-            caption.text = words.slice(0, 15).join(' ');
-          }
-        } else if (captionLength === 'medium') {
-          // For medium, ensure it's 25-40 words
-          if (words.length < 25) {
-            // If fewer than 25 words, pad with generic text
-            const padding = [
-              'This', 'wonderful', 'image', 'captures', 'a', 'moment', 'that', 'speaks', 'volumes', 'about',
-              'the', 'beauty', 'of', 'life', 'and', 'all', 'its', 'precious', 'moments', 'that',
-              'we', 'should', 'cherish', 'and', 'remember'
-            ];
-            caption.text = words.concat(padding.slice(0, 25 - words.length)).join(' ');
-          } else if (words.length > 40) {
-            // If more than 40 words, truncate to exactly 40
-            caption.text = words.slice(0, 40).join(' ');
-          }
-        } else if (captionLength === 'long') {
-          // For long, ensure it's 50-75 words
-          if (words.length < 50) {
-            // If fewer than 50 words, pad with generic text
-            const padding = Array(50).fill('').map((_, i) => 
-              ['moment', 'beautiful', 'capture', 'memory', 'experience', 'feeling', 'emotion', 'journey', 'adventure', 'story'][i % 10]
-            );
-            caption.text = words.concat(padding.slice(0, 50 - words.length)).join(' ');
-          } else if (words.length > 75) {
-            // If more than 75 words, truncate to exactly 75
-            caption.text = words.slice(0, 75).join(' ');
-          }
-        }
-        
-        // Enforce hashtags setting
-        if (!includeHashtags) {
-          caption.hashtags = [];
-        }
-        
-        // Enforce emojis setting
-        if (!includeEmojis) {
-          caption.emojis = [];
-          
-          // Also remove emojis from the caption text
-          caption.text = caption.text.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim();
-        }
-        
-        return caption;
       });
-      
-      // Remove any empty captions after processing
-      parsedContent.captions = parsedContent.captions.filter((caption: Caption) => caption.text.trim() !== '');
-      
-      // Cost-saving measure: Limit the number of captions returned
-      const MAX_CAPTIONS = 6;
-      if (parsedContent.captions.length > MAX_CAPTIONS) {
-        parsedContent.captions = parsedContent.captions.slice(0, MAX_CAPTIONS);
-      }
 
-      return NextResponse.json(parsedContent);
-    } catch (apiError: unknown) {
-      console.error('OpenAI API error:', apiError);
+    // Extract the response content
+    const responseContent = response.choices[0].message.content;
+    
+    // Try to parse the response as JSON directly
+    let parsedResponse;
+    try {
+      parsedResponse = JSON.parse(responseContent);
+    } catch (error) {
+      // If direct parsing fails, try to extract JSON from the string
+      parsedResponse = extractJsonFromString(responseContent);
+    }
+
+    // Ensure we have a valid response structure
+    if (!parsedResponse || !parsedResponse.captions) {
+      // Create a fallback response
+      parsedResponse = {
+        captions: [
+          {
+            text: `Default ${isVideo ? 'video' : 'image'} caption. Please try again.`,
+            category: "General",
+            hashtags: includeHashtags ? ["instagram", "caption", "default"] : [],
+            emojis: includeEmojis ? ["📷", "✨"] : [],
+            viral_score: 5
+          }
+        ]
+      };
+    }
+
+    // If we got a single caption object instead of an array, convert it
+    if (parsedResponse.captions && !Array.isArray(parsedResponse.captions)) {
+      parsedResponse.captions = [parsedResponse.captions];
+    }
+
+    // Normalize caption fields to ensure consistent naming
+    parsedResponse.captions = normalizeCaptions(parsedResponse.captions);
+    
+    // Post-process captions to enforce length constraints and respect hashtags/emojis settings
+    parsedResponse.captions = parsedResponse.captions.map((caption: Caption) => {
+      // Process caption text based on length setting
+      const words = caption.text.trim().split(/\s+/);
       
-      // Handle specific OpenAI API errors
-      if (apiError && typeof apiError === 'object' && 'status' in apiError) {
-        const error = apiError as { status: number; message?: string };
-        if (error.status === 400) {
-          return NextResponse.json(
-            { error: 'Invalid request to OpenAI API. The images may be too large or in an unsupported format.' },
-            { status: 400 }
+      if (captionLength === 'single-word') {
+        caption.text = words[0] || caption.text;
+      } else if (captionLength === 'micro') {
+        // For micro, ensure it's 2-3 words (not 1, not 4+)
+        if (words.length < 2) {
+          // If only one word, duplicate it to make two words
+          caption.text = `${words[0]} ${words[0] || 'amazing'}`;
+        } else if (words.length > 3) {
+          // If more than 3 words, truncate to exactly 3
+          caption.text = words.slice(0, 3).join(' ');
+        }
+      } else if (captionLength === 'short') {
+        // For short, ensure it's 10-15 words
+        if (words.length < 10) {
+          // If fewer than 10 words, pad with generic text
+          const padding = ['This', 'image', 'shows', 'a', 'beautiful', 'scene', 'worth', 'sharing', 'with', 'everyone'];
+          caption.text = words.concat(padding.slice(0, 10 - words.length)).join(' ');
+        } else if (words.length > 15) {
+          // If more than 15 words, truncate to exactly 15
+          caption.text = words.slice(0, 15).join(' ');
+        }
+      } else if (captionLength === 'medium') {
+        // For medium, ensure it's 25-40 words
+        if (words.length < 25) {
+          // If fewer than 25 words, pad with generic text
+          const padding = [
+            'This', 'wonderful', 'image', 'captures', 'a', 'moment', 'that', 'speaks', 'volumes', 'about',
+            'the', 'beauty', 'of', 'life', 'and', 'all', 'its', 'precious', 'moments', 'that',
+            'we', 'should', 'cherish', 'and', 'remember'
+          ];
+          caption.text = words.concat(padding.slice(0, 25 - words.length)).join(' ');
+        } else if (words.length > 40) {
+          // If more than 40 words, truncate to exactly 40
+          caption.text = words.slice(0, 40).join(' ');
+        }
+      } else if (captionLength === 'long') {
+        // For long, ensure it's 50-75 words
+        if (words.length < 50) {
+          // If fewer than 50 words, pad with generic text
+          const padding = Array(50).fill('').map((_, i) => 
+            ['moment', 'beautiful', 'capture', 'memory', 'experience', 'feeling', 'emotion', 'journey', 'adventure', 'story'][i % 10]
           );
-        } else if (error.status === 429) {
-          return NextResponse.json(
-            { error: 'Rate limit exceeded. Please try again later.' },
-            { status: 429 }
-          );
-        } else {
-          return NextResponse.json(
-            { error: `OpenAI API error: ${error.message || 'Unknown error'}` },
-            { status: error.status || 500 }
-          );
+          caption.text = words.concat(padding.slice(0, 50 - words.length)).join(' ');
+        } else if (words.length > 75) {
+          // If more than 75 words, truncate to exactly 75
+          caption.text = words.slice(0, 75).join(' ');
         }
       }
-      return NextResponse.json(
-        { error: 'An unknown error occurred with the OpenAI API' },
-        { status: 500 }
-      );
+      
+      // Enforce hashtags setting
+      if (!includeHashtags) {
+        caption.hashtags = [];
+      }
+      
+      // Enforce emojis setting
+      if (!includeEmojis) {
+        caption.emojis = [];
+        
+        // Also remove emojis from the caption text
+        caption.text = caption.text.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim();
+      }
+      
+      return caption;
+    });
+    
+    // Remove any empty captions after processing
+    parsedResponse.captions = parsedResponse.captions.filter((caption: Caption) => caption.text.trim() !== '');
+    
+    // Cost-saving measure: Limit the number of captions returned
+    const MAX_CAPTIONS = 6;
+    if (parsedResponse.captions.length > MAX_CAPTIONS) {
+      parsedResponse.captions = parsedResponse.captions.slice(0, MAX_CAPTIONS);
     }
+
+    return NextResponse.json(parsedResponse);
   } catch (error: unknown) {
     console.error('Error in caption generation:', error);
     return NextResponse.json(

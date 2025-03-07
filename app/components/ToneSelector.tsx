@@ -107,7 +107,8 @@ export default function ToneSelector({ selectedTone, onToneChange }: ToneSelecto
   }, [checkScrollPosition]);
   
   // Scroll functions
-  const scrollLeft = () => {
+  const scrollLeft = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent event bubbling
     if (carouselRef.current) {
       // Scroll by one card width plus margin for smoother navigation
       const cardWidth = 270 + 16; // card width (270px) + margin (16px)
@@ -117,7 +118,8 @@ export default function ToneSelector({ selectedTone, onToneChange }: ToneSelecto
     }
   };
   
-  const scrollRight = () => {
+  const scrollRight = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent event bubbling
     if (carouselRef.current) {
       // Scroll by one card width plus margin for smoother navigation
       const cardWidth = 270 + 16; // card width (270px) + margin (16px)
@@ -144,15 +146,14 @@ export default function ToneSelector({ selectedTone, onToneChange }: ToneSelecto
         <AnimatePresence>
           {canScrollLeft && (
             <motion.button 
-              onClick={scrollLeft}
-              className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-1 z-10 w-10 h-10 bg-white dark:bg-gray-700 rounded-full shadow-md flex items-center justify-center text-gray-600 dark:text-gray-300"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
+              onClick={(e) => scrollLeft(e)}
+              className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-1 z-20 w-12 h-12 bg-white dark:bg-gray-700 rounded-full shadow-md flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              style={{ touchAction: 'none' }}
             >
-              <FiChevronLeft />
+              <FiChevronLeft className="w-5 h-5" />
             </motion.button>
           )}
         </AnimatePresence>
@@ -160,22 +161,21 @@ export default function ToneSelector({ selectedTone, onToneChange }: ToneSelecto
         <AnimatePresence>
           {canScrollRight && (
             <motion.button 
-              onClick={scrollRight}
-              className="absolute right-0 top-1/2 transform -translate-y-1/2 translate-x-1 z-10 w-10 h-10 bg-white dark:bg-gray-700 rounded-full shadow-md flex items-center justify-center text-gray-600 dark:text-gray-300"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
+              onClick={(e) => scrollRight(e)}
+              className="absolute right-0 top-1/2 transform -translate-y-1/2 translate-x-1 z-20 w-12 h-12 bg-white dark:bg-gray-700 rounded-full shadow-md flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              style={{ touchAction: 'none' }}
             >
-              <FiChevronRight />
+              <FiChevronRight className="w-5 h-5" />
             </motion.button>
           )}
         </AnimatePresence>
         
         <div 
           ref={carouselRef}
-          className="flex overflow-x-auto pb-6 pt-2 px-5 -mx-5 hide-scrollbar"
+          className="flex overflow-x-auto pb-6 pt-2 px-8 -mx-5 hide-scrollbar"
           onScroll={checkScrollPosition}
         >
           {toneOptions.map((tone) => (
@@ -183,8 +183,7 @@ export default function ToneSelector({ selectedTone, onToneChange }: ToneSelecto
               key={tone.value}
               whileHover={{ 
                 scale: 1.02, 
-                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-                y: -5
+                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
               }}
               whileTap={{ scale: 0.98 }}
               onClick={() => {

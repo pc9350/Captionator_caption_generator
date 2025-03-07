@@ -52,15 +52,60 @@ export const getCachedChatCompletion = async (params: any) => {
   const openaiParams = { ...params };
   delete openaiParams.timestamp;
   
-  const response = await openai.chat.completions.create(openaiParams);
-  
-  // Cache the response (even if bypass was requested, for future use)
-  responseCache[cacheKey] = {
-    timestamp: Date.now(),
-    response,
-  };
-  
-  return response;
+  try {
+    const response = await openai.chat.completions.create(openaiParams);
+    
+    // Cache the response (even if bypass was requested, for future use)
+    responseCache[cacheKey] = {
+      timestamp: Date.now(),
+      response,
+    };
+    
+    return response;
+  } catch (error: any) {
+    console.error('OpenAI API error:', error);
+    
+    // Create a fallback response that won't break the application
+    const fallbackResponse = {
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              captions: [
+                {
+                  text: "Unable to generate caption. Please try again.",
+                  category: "General",
+                  hashtags: [],
+                  emojis: [],
+                  viral_score: 5
+                }
+              ]
+            })
+          }
+        }
+      ]
+    };
+    
+    // Don't cache error responses
+    
+    // If it's a rate limit error, provide specific information
+    if (error.status === 429) {
+      console.warn('OpenAI rate limit exceeded. Using fallback response.');
+      fallbackResponse.choices[0].message.content = JSON.stringify({
+        captions: [
+          {
+            text: "Rate limit exceeded. Please try again in a moment.",
+            category: "Error",
+            hashtags: [],
+            emojis: [],
+            viral_score: 5
+          }
+        ]
+      });
+    }
+    
+    return fallbackResponse;
+  }
 };
 
 export const generateCaption = async (
