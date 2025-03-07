@@ -17,10 +17,10 @@ Captionator is a modern web application that uses AI to generate engaging and cr
 
 ## Demo
 
-### Image Caption Generation
+### Home Page
 ![Home Page](./public/demo/captionator_demo_img_1.png)
 
-### Video Caption Generation
+### Media Page
 ![Media Page](./public/demo/captionator_demo_img_2.png)
 
 ## Tech Stack
