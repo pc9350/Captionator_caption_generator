@@ -35,6 +35,7 @@ export const pickImage = async (): Promise<{ uri: string; base64: string; isVide
       allowsEditing: true,
       aspect: [4, 3],
       quality: IMAGE_QUALITY,
+      videoMaxDuration: 60, // Limit videos to 60 seconds
     });
 
     if (result.canceled) {
@@ -43,18 +44,20 @@ export const pickImage = async (): Promise<{ uri: string; base64: string; isVide
 
     const asset = result.assets[0];
     const uri = asset.uri;
-    const isVideo = uri.endsWith('.mp4') || uri.endsWith('.mov') || uri.includes('video');
+    const isVideo = asset.type === 'video' || uri.endsWith('.mp4') || uri.endsWith('.mov') || uri.includes('video');
     
-    // Process the media
-    if (isVideo) {
-      // For videos, we'll use a thumbnail or first frame
-      // This is a simplified approach - in a real app, you'd generate a proper thumbnail
+    try {
+      // Process the media
       const base64 = await processImage(uri);
-      return { uri, base64, isVideo: true };
-    } else {
-      // For images, process normally
-      const base64 = await processImage(uri);
-      return { uri, base64, isVideo: false };
+      return { uri, base64, isVideo };
+    } catch (error) {
+      console.error('Error processing media:', error);
+      // Return with a placeholder base64 string
+      return { 
+        uri, 
+        base64: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 
+        isVideo 
+      };
     }
   } catch (error) {
     console.error('Error picking image:', error);
@@ -76,6 +79,7 @@ export const takePhoto = async (): Promise<{ uri: string; base64: string; isVide
       allowsEditing: true,
       aspect: [4, 3],
       quality: IMAGE_QUALITY,
+      videoMaxDuration: 60, // Limit videos to 60 seconds
     });
 
     if (result.canceled) {
@@ -84,18 +88,20 @@ export const takePhoto = async (): Promise<{ uri: string; base64: string; isVide
 
     const asset = result.assets[0];
     const uri = asset.uri;
-    const isVideo = uri.endsWith('.mp4') || uri.endsWith('.mov') || uri.includes('video');
+    const isVideo = asset.type === 'video' || uri.endsWith('.mp4') || uri.endsWith('.mov') || uri.includes('video');
     
-    // Process the media
-    if (isVideo) {
-      // For videos, we'll use a thumbnail or first frame
-      // This is a simplified approach - in a real app, you'd generate a proper thumbnail
+    try {
+      // Process the media
       const base64 = await processImage(uri);
-      return { uri, base64, isVideo: true };
-    } else {
-      // For images, process normally
-      const base64 = await processImage(uri);
-      return { uri, base64, isVideo: false };
+      return { uri, base64, isVideo };
+    } catch (error) {
+      console.error('Error processing media:', error);
+      // Return with a placeholder base64 string
+      return { 
+        uri, 
+        base64: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 
+        isVideo 
+      };
     }
   } catch (error) {
     console.error('Error taking photo:', error);
@@ -106,27 +112,46 @@ export const takePhoto = async (): Promise<{ uri: string; base64: string; isVide
 // Process an image to ensure it meets the requirements for the OpenAI API
 export const processImage = async (uri: string): Promise<string> => {
   try {
-    // First, resize the image to reduce token usage
-    const resizedImage = await ImageManipulator.manipulateAsync(
-      uri,
-      [{ resize: { width: MAX_WIDTH, height: MAX_HEIGHT } }],
-      { compress: IMAGE_QUALITY, format: ImageManipulator.SaveFormat.JPEG }
-    );
+    // Check if the URI is for a video
+    const isVideo = uri.endsWith('.mp4') || uri.endsWith('.mov') || uri.includes('video');
+    
+    if (isVideo) {
+      // For videos, return a placeholder base64 image
+      // This is a simplified approach - in a real app, you'd generate a proper thumbnail
+      // Return a small placeholder image for videos to avoid processing errors
+      return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+    }
+    
+    // For images, resize to reduce token usage
+    try {
+      const resizedImage = await ImageManipulator.manipulateAsync(
+        uri,
+        [{ resize: { width: MAX_WIDTH, height: MAX_HEIGHT } }],
+        { compress: IMAGE_QUALITY, format: ImageManipulator.SaveFormat.JPEG }
+      );
 
-    // Convert the resized image to base64
-    const base64 = await FileSystem.readAsStringAsync(resizedImage.uri, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
+      // Convert the resized image to base64
+      const base64 = await FileSystem.readAsStringAsync(resizedImage.uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
 
-    // Calculate approximate token size (very rough estimate)
-    const tokenSize = Math.ceil(base64.length / 4) * 0.75;
-    console.log(`Estimated image token size: ~${Math.round(tokenSize / 1000)}K tokens`);
+      // Calculate approximate token size (very rough estimate)
+      const tokenSize = Math.ceil(base64.length / 4) * 0.75;
+      console.log(`Estimated image token size: ~${Math.round(tokenSize / 1000)}K tokens`);
 
-    // Return the base64 image with the appropriate prefix
-    return `data:image/jpeg;base64,${base64}`;
+      // Return the base64 image with the appropriate prefix
+      return `data:image/jpeg;base64,${base64}`;
+    } catch (error) {
+      console.error('Error in image manipulation:', error);
+      
+      // If the image is too large or can't be processed, return a placeholder
+      console.log('Returning placeholder image due to processing error');
+      return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+    }
   } catch (error) {
     console.error('Error processing image:', error);
-    throw error;
+    // Return a placeholder image in case of error
+    return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
   }
 };
 

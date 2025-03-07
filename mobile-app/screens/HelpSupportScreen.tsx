@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -18,24 +18,39 @@ import Header from '../components/Header';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import FloatingNavbar from '../components/FloatingNavbar';
+import emailjs from '@emailjs/browser';
+import { EMAILJS_CONFIG } from '../config/emailConfig';
 
-// Mock email sending function (in a real app, this would be an API call)
+// Real email sending function using EmailJS
 const sendEmailDirectly = async (
   name: string, 
   email: string, 
   subject: string, 
   message: string
 ): Promise<boolean> => {
-  // Simulate API call to send email
-  return new Promise((resolve) => {
-    // Simulate network delay
-    setTimeout(() => {
-      // In a real app, this would be an API call to your backend
-      console.log('Sending email:', { name, email, subject, message });
-      // Simulate success (in a real app, this would be the API response)
-      resolve(true);
-    }, 1500);
-  });
+  try {
+    // Prepare template parameters
+    const templateParams = {
+      from_name: name,
+      from_email: email,
+      subject: subject,
+      message: message,
+    };
+
+    // Send email using EmailJS
+    const response = await emailjs.send(
+      EMAILJS_CONFIG.SERVICE_ID,
+      EMAILJS_CONFIG.TEMPLATE_ID,
+      templateParams,
+      EMAILJS_CONFIG.PUBLIC_KEY
+    );
+
+    console.log('Email sent successfully:', response);
+    return true;
+  } catch (error) {
+    console.error('Error sending email:', error);
+    return false;
+  }
 };
 
 const HelpSupportScreen = () => {
@@ -46,6 +61,12 @@ const HelpSupportScreen = () => {
   const [email, setEmail] = useState(user?.email || '');
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
+  
+  // Initialize EmailJS
+  useEffect(() => {
+    // Initialize EmailJS with your user ID
+    emailjs.init(EMAILJS_CONFIG.USER_ID);
+  }, []);
   
   const handleSubmit = async () => {
     // Validate form
@@ -64,7 +85,7 @@ const HelpSupportScreen = () => {
     setIsLoading(true);
     
     try {
-      // Send email directly from the app
+      // Send email using EmailJS
       const success = await sendEmailDirectly(
         name,
         email,
@@ -87,9 +108,29 @@ const HelpSupportScreen = () => {
       }
     } catch (error) {
       console.error('Error sending message:', error);
+      
+      // Offer fallback option to open email client
       Alert.alert(
         'Error', 
-        'Failed to send message. Please try again or contact us directly at chhabrapranav2001@gmail.com'
+        'Failed to send message. Would you like to open your email app instead?',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel'
+          },
+          {
+            text: 'Open Email App',
+            onPress: () => {
+              const emailBody = `
+Name: ${name}
+Email: ${email}
+
+${message}
+              `;
+              Linking.openURL(`mailto:chhabrapranav2001@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`);
+            }
+          }
+        ]
       );
     } finally {
       setIsLoading(false);

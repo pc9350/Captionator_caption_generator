@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   Platform,
   Dimensions,
   FlatList,
+  Modal,
 } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
 import { pickImage, takePhoto } from '../utils/imageUtils';
@@ -32,11 +33,16 @@ import {
   CreativeLanguageOptions,
 } from '../types/caption';
 import FloatingNavbar from '../components/FloatingNavbar';
+import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
 
 const { width } = Dimensions.get('window');
 
 const DashboardScreen = () => {
   const [error, setError] = useState<string | null>(null);
+  const [videoModalVisible, setVideoModalVisible] = useState(false);
+  const [isVideoLoading, setIsVideoLoading] = useState(true);
+  const [videoError, setVideoError] = useState<string | null>(null);
+  const videoRef = useRef<Video>(null);
   
   // Use the caption store for state management
   const { 
@@ -200,6 +206,30 @@ const DashboardScreen = () => {
     </TouchableOpacity>
   );
 
+  // Handle video play
+  const handlePlayVideo = () => {
+    if (uploadedMedia.length > 0 && uploadedMedia[activeMediaIndex].isVideo) {
+      setVideoError(null);
+      setIsVideoLoading(true);
+      setVideoModalVisible(true);
+    }
+  };
+
+  // Handle video playback status
+  const onPlaybackStatusUpdate = (status: AVPlaybackStatus) => {
+    if (status.isLoaded) {
+      setIsVideoLoading(false);
+      setVideoError(null);
+    } else {
+      // Handle error
+      if (status.error) {
+        console.error(`Error loading video: ${status.error}`);
+        setVideoError('Failed to load video. Please try again.');
+        setIsVideoLoading(false);
+      }
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <Header 
@@ -230,9 +260,16 @@ const DashboardScreen = () => {
                 resizeMode="cover"
               />
               {uploadedMedia[activeMediaIndex].isVideo && (
-                <View style={styles.videoOverlay}>
-                  <Ionicons name="play-circle" size={48} color="white" />
-                </View>
+                <TouchableOpacity 
+                  style={styles.videoOverlay}
+                  onPress={handlePlayVideo}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.playButtonContainer}>
+                    <Ionicons name="play-circle" size={64} color="white" />
+                    <Text style={styles.playVideoText}>Tap to play video</Text>
+                  </View>
+                </TouchableOpacity>
               )}
             </View>
           ) : (
@@ -344,6 +381,81 @@ const DashboardScreen = () => {
         )}
       </ScrollView>
       
+      {/* Video Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={videoModalVisible}
+        onRequestClose={() => setVideoModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.videoContainer}>
+            {uploadedMedia.length > 0 && uploadedMedia[activeMediaIndex].isVideo && (
+              <>
+                <Video
+                  ref={videoRef}
+                  source={{ uri: uploadedMedia[activeMediaIndex].uri }}
+                  style={styles.videoPlayer}
+                  useNativeControls
+                  resizeMode={ResizeMode.CONTAIN}
+                  isLooping
+                  shouldPlay
+                  onPlaybackStatusUpdate={onPlaybackStatusUpdate}
+                  onLoad={() => {
+                    setIsVideoLoading(false);
+                    setVideoError(null);
+                  }}
+                  onError={(error) => {
+                    console.error('Video playback error:', error);
+                    setIsVideoLoading(false);
+                    setVideoError('Failed to play video. The format may not be supported.');
+                  }}
+                />
+                {isVideoLoading && (
+                  <View style={styles.videoLoadingContainer}>
+                    <ActivityIndicator size="large" color="#4338ca" />
+                    <Text style={styles.videoLoadingText}>Loading video...</Text>
+                  </View>
+                )}
+                {videoError && (
+                  <View style={styles.videoErrorContainer}>
+                    <Ionicons name="alert-circle" size={48} color="#ef4444" />
+                    <Text style={styles.videoErrorText}>{videoError}</Text>
+                    <TouchableOpacity 
+                      style={styles.tryAgainButton}
+                      onPress={() => {
+                        setIsVideoLoading(true);
+                        setVideoError(null);
+                        // Attempt to reload the video
+                        if (videoRef.current) {
+                          videoRef.current.loadAsync(
+                            { uri: uploadedMedia[activeMediaIndex].uri },
+                            { shouldPlay: true },
+                            false
+                          );
+                        }
+                      }}
+                    >
+                      <Text style={styles.tryAgainButtonText}>Try Again</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </>
+            )}
+            <TouchableOpacity 
+              style={styles.closeButton}
+              onPress={() => {
+                setVideoModalVisible(false);
+                setIsVideoLoading(true); // Reset loading state for next time
+                setVideoError(null);
+              }}
+            >
+              <Ionicons name="close-circle" size={36} color="white" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+      
       <FloatingNavbar />
     </SafeAreaView>
   );
@@ -414,8 +526,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.2)',
-    borderRadius: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
   },
   imagePlaceholder: {
     width: '100%',
@@ -556,6 +667,86 @@ const styles = StyleSheet.create({
     color: '#1f2937',
     marginBottom: 16,
     paddingHorizontal: 4,
+  },
+  playButtonContainer: {
+    alignItems: 'center',
+  },
+  playVideoText: {
+    color: 'white',
+    marginTop: 8,
+    fontSize: 14,
+    fontWeight: '600',
+    textShadowColor: 'rgba(0, 0, 0, 0.8)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  videoContainer: {
+    width: '100%',
+    height: '80%',
+    position: 'relative',
+  },
+  videoPlayer: {
+    width: '100%',
+    height: '100%',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    zIndex: 10,
+  },
+  videoLoadingContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+  },
+  videoLoadingText: {
+    color: 'white',
+    marginTop: 12,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  videoErrorContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    padding: 20,
+  },
+  videoErrorText: {
+    color: 'white',
+    marginTop: 12,
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  tryAgainButton: {
+    backgroundColor: '#4338ca',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 10,
+  },
+  tryAgainButtonText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 14,
   },
 });
 
