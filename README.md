@@ -2,8 +2,6 @@
 
 Captionator is a modern web application that uses AI to generate engaging and creative captions for your social media posts. Simply upload an image or video, select a tone, and get multiple caption options tailored to your content.
 
-![Captionator Demo](public/demo/captionator-demo.png)
-
 ## Features
 
 - **AI-Powered Caption Generation**: Leverages OpenAI to create contextually relevant captions based on your images and videos
@@ -20,10 +18,10 @@ Captionator is a modern web application that uses AI to generate engaging and cr
 ## Demo
 
 ### Image Caption Generation
-![Image Caption Demo](public/demo/image-caption-demo.png)
+![Image Caption Demo](./public/demo/captionator_demo_img_1.png)
 
 ### Video Caption Generation
-![Video Caption Demo](public/demo/video-caption-demo.png)
+![Video Caption Demo](./public/demo/captionator_demo_img_2.png)
 
 ## Tech Stack
 
