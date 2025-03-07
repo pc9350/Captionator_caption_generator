@@ -13,7 +13,7 @@ import clickAnimation from '../animations/click-animation.json';
 const features = [
   {
     title: 'AI-Powered Generation',
-    description: 'Advanced AI algorithms create captions tailored to your image content and selected tone.',
+    description: 'Advanced AI algorithms create captions tailored to your image and video content with your selected tone.',
     animation: captionAnimation,
     iconColor: 'text-blue-600',
     bgColor: 'bg-blue-50 dark:bg-blue-900/30'
@@ -34,14 +34,14 @@ const features = [
   },
   {
     title: 'Emoji Suggestions',
-    description: 'Get emoji suggestions that match the mood and content of your image.',
+    description: 'Get emoji suggestions that match the mood and content of your media.',
     animation: emojiAnimation,
     iconColor: 'text-yellow-600',
     bgColor: 'bg-yellow-50 dark:bg-yellow-900/30'
   },
   {
-    title: 'Image Analysis',
-    description: 'Our AI analyzes your images to create contextually relevant captions.',
+    title: 'Image & Video Analysis',
+    description: 'Our AI analyzes your photos and videos to create contextually relevant captions.',
     animation: imageAnalysisAnimation,
     iconColor: 'text-red-600',
     bgColor: 'bg-red-50 dark:bg-red-900/30'
@@ -70,7 +70,7 @@ export default function FeaturesSection() {
             Everything You Need for Perfect Captions
           </h2>
           <p className="text-lg sm:text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed">
-            Our AI-powered platform helps you create engaging captions that resonate with your audience across all social media platforms.
+            Our AI-powered platform helps you create engaging captions for your photos and videos that resonate with your audience across all social media platforms.
           </p>
         </div>
 

@@ -37,7 +37,7 @@ export default function Dashboard() {
         <div className="lg:col-span-2">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-8">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-              Upload Your Image
+              Upload Your Media
             </h2>
             <div className="h-64 bg-gray-100 dark:bg-gray-800 rounded-lg"></div>
           </div>
