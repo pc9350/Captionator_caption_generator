@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDropzone } from 'react-dropzone';
-import { FiUpload, FiX, FiImage, FiGrid, FiAlertCircle, FiPlus, FiChevronRight, FiMaximize2, FiLayers, FiTrash2, FiCamera, FiChevronLeft, FiVideo, FiFilm } from 'react-icons/fi';
+import { FiUpload, FiX, FiImage, FiGrid, FiAlertCircle, FiPlus, FiChevronRight, FiMaximize2, FiLayers, FiTrash2, FiCamera, FiChevronLeft, FiVideo, FiFilm, FiPlay } from 'react-icons/fi';
 import { useImageUpload } from '../hooks/useImageUpload';
 import uploadAnimation from "../animations/upload-animation.json";
 import Lottie from "lottie-react";
@@ -520,7 +520,8 @@ export default function ImageUploader() {
                 {/* Grid View */}
                 {isGridView ? (
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-6 w-full h-full overflow-y-auto z-10 bg-gray-900/50">
-                    {uploadedImages.map((image, index) => {
+                    {uploadedImages.map((media, index) => {
+                      const isVideo = media.isVideo || (media.file && media.file.type.startsWith('video/'));
                       return (
                         <div
                           key={`grid-item-${index}`}
@@ -536,30 +537,55 @@ export default function ImageUploader() {
                           }}
                         >
                           <div className="absolute inset-0 flex items-center justify-center bg-gray-800/30">
-                            <Image
-                              src={image.url}
-                              alt={`Uploaded ${index + 1}`}
-                              width={500}
-                              height={500}
-                              className="max-w-full max-h-full object-contain"
-                              style={{
-                                backgroundColor: "#2d3748",
-                                filter: "drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1))",
-                                padding: "2px",
-                                width: "auto",
-                                height: "auto"
-                              }}
-                              onError={(e) => {
-                                console.error('Image failed to load:', e);
-                                e.currentTarget.src = '/fallback.svg';
-                              }}
-                />
-              </div>
+                            {isVideo ? (
+                              <>
+                                {/* Video Thumbnail with Play Icon Overlay */}
+                                <div className="relative w-full h-full">
+                                  <video
+                                    src={media.url}
+                                    className="max-w-full max-h-full object-contain w-full h-full"
+                                    style={{
+                                      backgroundColor: "#2d3748",
+                                      objectFit: "cover"
+                                    }}
+                                    onError={(e) => {
+                                      console.error('Video failed to load:', e);
+                                    }}
+                                  />
+                                  {/* Play Icon Overlay */}
+                                  <div className="absolute inset-0 flex items-center justify-center">
+                                    <div className="bg-black/50 rounded-full p-2">
+                                      <FiPlay className="w-6 h-6 text-white" />
+                                    </div>
+                                  </div>
+                                </div>
+                              </>
+                            ) : (
+                              <Image
+                                src={media.url}
+                                alt={`Uploaded ${index + 1}`}
+                                width={500}
+                                height={500}
+                                className="max-w-full max-h-full object-contain"
+                                style={{
+                                  backgroundColor: "#2d3748",
+                                  filter: "drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1))",
+                                  padding: "2px",
+                                  width: "auto",
+                                  height: "auto"
+                                }}
+                                onError={(e) => {
+                                  console.error('Image failed to load:', e);
+                                  e.currentTarget.src = '/fallback.svg';
+                                }}
+                              />
+                            )}
+                          </div>
                         </div>
                       );
                     })}
-            </div>
-          ) : (
+                  </div>
+                ) : (
                   // Carousel View
                   <div className="relative w-full h-full flex items-center justify-center">
                     {/* Navigation buttons */}
