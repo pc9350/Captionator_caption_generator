@@ -46,21 +46,24 @@ const CaptionCard: React.FC<CaptionCardProps> = ({
 
   const handleCopy = async () => {
     try {
+      // Start with the caption text
       let textToCopy = caption.text;
       
-      // Add emojis if enabled
+      // Add emojis if enabled (inline with text)
       if (includeEmojis && caption.emojis && caption.emojis.length > 0) {
         textToCopy += ' ' + caption.emojis.join(' ');
       }
       
-      // Add hashtags if enabled
+      // Add hashtags if enabled (on a new line)
       if (includeHashtags && caption.hashtags && caption.hashtags.length > 0) {
-        textToCopy += '\n\n' + caption.hashtags.map(tag => `#${tag}`).join(' ');
+        textToCopy += '\n\n' + caption.hashtags.map(tag => `#${tag.replace(/^#/, '')}`).join(' ');
       }
       
       await ExpoClipboard.setStringAsync(textToCopy);
       setCopied(true);
-      Alert.alert('Success', 'Caption copied to clipboard!');
+      
+      // Use a visual indicator instead of an alert
+      console.log('Caption copied to clipboard');
       
       // Reset copied state after 2 seconds
       setTimeout(() => setCopied(false), 2000);
@@ -76,10 +79,8 @@ const CaptionCard: React.FC<CaptionCardProps> = ({
     try {
       setIsSaving(true);
       await onSave(caption);
-      Alert.alert('Success', 'Caption saved successfully!');
     } catch (error) {
       console.error('Error saving caption:', error);
-      Alert.alert('Error', 'Failed to save caption.');
     } finally {
       setIsSaving(false);
     }
@@ -102,10 +103,8 @@ const CaptionCard: React.FC<CaptionCardProps> = ({
             try {
               setIsDeleting(true);
               await onDelete(caption.id);
-              Alert.alert('Success', 'Caption deleted successfully!');
             } catch (error) {
               console.error('Error deleting caption:', error);
-              Alert.alert('Error', 'Failed to delete caption.');
             } finally {
               setIsDeleting(false);
             }
@@ -184,7 +183,12 @@ const CaptionCard: React.FC<CaptionCardProps> = ({
       <View style={styles.content}>
         <View style={styles.captionTextContainer}>
           <AnimatedCaption 
-            captions={[caption.text]}
+            captions={[
+              // Include emojis directly in the caption text if enabled
+              includeEmojis && caption.emojis && caption.emojis.length > 0
+                ? `${caption.text} ${caption.emojis.join(' ')}`
+                : caption.text
+            ]}
             typingSpeed={30}
             pauseDuration={5000}
             deletingSpeed={0}
@@ -192,14 +196,9 @@ const CaptionCard: React.FC<CaptionCardProps> = ({
             fontSize={16}
             textColor="#6366f1"
           />
-          
-          {includeEmojis && caption.emojis && caption.emojis.length > 0 && (
-            <Text style={styles.emojiText}>
-              {caption.emojis.join(' ')}
-            </Text>
-          )}
         </View>
         
+        {/* Only show hashtags separately */}
         {includeHashtags && caption.hashtags && caption.hashtags.length > 0 && (
           <View style={styles.hashtagsContainer}>
             {caption.hashtags.map((tag, index) => (

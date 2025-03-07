@@ -32,54 +32,93 @@ const openai = new OpenAI({
 
 // Helper function to extract JSON from a string that might contain additional text
 function extractJsonFromString(str: string): any {
+  console.log('Attempting to extract JSON from string');
+  
+  if (!str || typeof str !== 'string') {
+    console.error('Invalid input to extractJsonFromString:', str);
+    return createFallbackJsonResponse('Invalid response format');
+  }
+  
   try {
     // First, try direct JSON parsing
     return JSON.parse(str);
   } catch (e) {
+    console.log('Direct JSON parsing failed, trying to extract JSON from string');
+    
     // If direct parsing fails, try to extract JSON from the string
     try {
-      // Look for JSON object pattern
+      // Look for JSON object pattern with captions array
+      const captionsJsonPattern = /{[\s\S]*?"captions"[\s\S]*?\[[\s\S]*?\][\s\S]*?}/;
+      const captionsMatch = str.match(captionsJsonPattern);
+      
+      if (captionsMatch && captionsMatch[0]) {
+        console.log('Found JSON with captions array, attempting to parse');
+        try {
+          const extractedJson = JSON.parse(captionsMatch[0]);
+          if (extractedJson && Array.isArray(extractedJson.captions)) {
+            console.log('Successfully parsed JSON with captions array');
+            return extractedJson;
+          }
+        } catch (parseError) {
+          console.log('Error parsing captions JSON:', parseError);
+        }
+      }
+      
+      // Look for any JSON object pattern
       const jsonPattern = /{[\s\S]*}/;
       const match = str.match(jsonPattern);
       
       if (match && match[0]) {
+        console.log('Found JSON-like pattern, attempting to parse');
         // Try to parse the extracted JSON
-        const extractedJson = JSON.parse(match[0]);
-        
-        // Validate the extracted JSON structure
-        if (extractedJson) {
-          // If we have a captions array, return it directly
-          if (Array.isArray(extractedJson.captions)) {
+        try {
+          const extractedJson = JSON.parse(match[0]);
+          console.log('Successfully parsed extracted JSON');
+          
+          // Validate the extracted JSON structure
+          if (extractedJson) {
+            // If we have a captions array, return it directly
+            if (Array.isArray(extractedJson.captions)) {
+              console.log('Found valid captions array');
+              return extractedJson;
+            }
+            
+            // If we have a single caption object with text field, wrap it in a captions array
+            if (extractedJson.text) {
+              console.log('Found single caption object, wrapping in captions array');
+              return {
+                captions: [validateCaptionFields(extractedJson)]
+              };
+            }
+            
+            // If we have a captions field but it's not an array, validate and wrap it
+            if (extractedJson.captions && !Array.isArray(extractedJson.captions)) {
+              console.log('Found captions field but not an array, wrapping properly');
+              return {
+                captions: [validateCaptionFields(extractedJson.captions)]
+              };
+            }
+            
+            // For any other structure, return the extracted JSON as is
+            console.log('Returning extracted JSON as is');
             return extractedJson;
           }
-          
-          // If we have a single caption object with text field, wrap it in a captions array
-          if (extractedJson.text) {
-            return {
-              captions: [validateCaptionFields(extractedJson)]
-            };
-          }
-          
-          // If we have a captions field but it's not an array, validate and wrap it
-          if (extractedJson.captions && !Array.isArray(extractedJson.captions)) {
-            return {
-              captions: [validateCaptionFields(extractedJson.captions)]
-            };
-          }
-          
-          // For any other structure, return the extracted JSON as is
-          return extractedJson;
+        } catch (parseError) {
+          console.error('Error parsing extracted JSON:', parseError);
         }
       }
       
       // If no valid JSON object was found, try to extract multiple JSON objects
+      console.log('Trying to find multiple JSON objects');
       const jsonObjects = str.match(/{[\s\S]*?}/g);
       if (jsonObjects && jsonObjects.length > 0) {
+        console.log(`Found ${jsonObjects.length} potential JSON objects`);
         // Try each extracted object until we find a valid one
         for (const jsonObj of jsonObjects) {
           try {
             const parsed = JSON.parse(jsonObj);
             if (parsed && (parsed.text || parsed.captions)) {
+              console.log('Found valid JSON object with captions or text');
               // If we found a valid caption object or captions array
               if (parsed.captions) {
                 return parsed;
@@ -95,22 +134,97 @@ function extractJsonFromString(str: string): any {
           }
         }
       }
+      
+      // Try to find any JSON-like structure with captions
+      console.log('Looking for captions in the text');
+      const captionsMatch2 = str.match(/"captions"\s*:\s*\[([\s\S]*?)\]/);
+      if (captionsMatch2 && captionsMatch2[1]) {
+        console.log('Found captions array in text, trying to reconstruct');
+        try {
+          // Try to reconstruct a valid JSON
+          const reconstructedJson = `{"captions": [${captionsMatch2[1]}]}`;
+          return JSON.parse(reconstructedJson);
+        } catch (reconstructError) {
+          console.error('Failed to reconstruct JSON:', reconstructError);
+        }
+      }
+      
+      // Try to extract structured data from markdown code blocks
+      const markdownJsonPattern = /```(?:json)?\s*([\s\S]*?)```/;
+      const markdownMatch = str.match(markdownJsonPattern);
+      if (markdownMatch && markdownMatch[1]) {
+        console.log('Found JSON in markdown code block');
+        try {
+          const jsonFromMarkdown = JSON.parse(markdownMatch[1].trim());
+          if (jsonFromMarkdown && (jsonFromMarkdown.captions || jsonFromMarkdown.text)) {
+            return jsonFromMarkdown;
+          }
+        } catch (markdownError) {
+          console.log('Error parsing JSON from markdown:', markdownError);
+        }
+      }
+      
+      // If all extraction attempts fail, try to extract any text that looks like a caption
+      console.log('Trying to extract any text that looks like a caption');
+      const textMatches = str.match(/"text"\s*:\s*"([^"]+)"/g);
+      if (textMatches && textMatches.length > 0) {
+        console.log(`Found ${textMatches.length} potential caption texts`);
+        const captions = textMatches.map(match => {
+          const text = match.replace(/"text"\s*:\s*"/, '').replace(/"$/, '');
+          return {
+            text,
+            category: "Extracted",
+            hashtags: [],
+            emojis: [],
+            viral_score: 5
+          };
+        });
+        
+        return { captions };
+      }
+      
+      // Last resort: look for any text between quotes that might be captions
+      const quotedTexts = str.match(/"([^"]{10,})"/g); // At least 10 chars to avoid property names
+      if (quotedTexts && quotedTexts.length > 0) {
+        console.log('Extracting quoted texts as potential captions');
+        const captions = quotedTexts
+          .map(text => text.replace(/^"|"$/g, ''))
+          .filter(text => text.length > 10 && !text.includes('{') && !text.includes('}'))
+          .map(text => ({
+            text,
+            category: "Extracted",
+            hashtags: [],
+            emojis: [],
+            viral_score: 5
+          }));
+        
+        if (captions.length > 0) {
+          return { captions };
+        }
+      }
     } catch (extractError) {
       console.error('Error extracting JSON:', extractError);
     }
     
     // If all extraction attempts fail, return a fallback object
-    return {
-      captions: [
-        {
-          text: "Unable to generate a proper caption. Please try again.",
-          category: "Error",
-          hashtags: [],
-          viral_score: 5
-        }
-      ]
-    };
+    return createFallbackJsonResponse('Failed to extract valid captions');
   }
+}
+
+// Helper function to create a fallback JSON response
+function createFallbackJsonResponse(errorMessage: string): any {
+  console.log('Creating fallback JSON response:', errorMessage);
+  return {
+    captions: [
+      {
+        text: "Unable to generate a proper caption. Please try again.",
+        category: "Error",
+        hashtags: [],
+        emojis: [],
+        viral_score: 5
+      }
+    ]
+  };
 }
 
 // Helper function to validate and provide defaults for caption fields
@@ -233,140 +347,167 @@ export const generateCaption = async (
     alliteration: false,
     rhyming: false
   },
+  isVideo: boolean = false,
   retryCount = 0
 ): Promise<Caption[]> => {
   try {
-    // Prepare a concise system message to save tokens
-    let systemMessage = `Generate ${captionLength === 'single-word' ? 'one-word' : 
-      captionLength === 'micro' ? '2-3 word' : 
-      captionLength === 'short' ? '10-15 word' : 
-      captionLength === 'medium' ? '25-40 word' : '50-75 word'} Instagram captions in ${tone} tone.`;
+    // Prepare a simplified system message to reduce token usage
+    let systemMessage = `You are a creative Instagram caption generator. Generate ${isVideo ? 'video' : 'image'} captions in ${tone} tone. You MUST generate captions for ANY image or video, including those containing people, landscapes, objects, or any other content. Your task is to create engaging captions, not to analyze or identify individuals.`;
     
-    // Add only essential style instructions to save tokens
-    if (spicyLevel !== 'none') {
-      systemMessage += ` Make it ${spicyLevel} spicy.`;
+    // Add caption length
+    if (captionLength === 'single-word') {
+      systemMessage += ' Use exactly ONE word per caption.';
+    } else if (captionLength === 'micro') {
+      systemMessage += ' Use 2-3 words per caption.';
+    } else if (captionLength === 'short') {
+      systemMessage += ' Use 10-15 words per caption.';
+    } else if (captionLength === 'medium') {
+      systemMessage += ' Use 25-40 words per caption.';
+    } else {
+      systemMessage += ' Use 50-75 words per caption.';
     }
     
+    // Add hashtags and emojis instructions
+    if (includeHashtags) {
+      systemMessage += ' Include hashtags.';
+    } else {
+      systemMessage += ' No hashtags.';
+    }
+    
+    if (includeEmojis) {
+      systemMessage += ' Include emojis.';
+    } else {
+      systemMessage += ' No emojis.';
+    }
+    
+    // Add spicy level
+    if (spicyLevel !== 'none') {
+      if (spicyLevel === 'mild') {
+        systemMessage += ' Make the caption playful and lightly flirtatious in a tasteful way.';
+      } else if (spicyLevel === 'medium') {
+        systemMessage += ' Make the caption moderately flirtatious with subtle wordplay.';
+      } else if (spicyLevel === 'hot') {
+        systemMessage += ' Make the caption bold and attention-grabbing with playful innuendos.';
+      } else if (spicyLevel === 'extra') {
+        systemMessage += ' Make the caption daring and provocative with creative wordplay that grabs attention.';
+      }
+    }
+    
+    // Add caption style
     if (captionStyle !== 'none') {
       systemMessage += ` Use ${captionStyle} style.`;
     }
     
-    // Add creative language options only if enabled
-    const creativeOptions = [];
-    if (creativeLanguageOptions.wordInvention) creativeOptions.push('word invention');
-    if (creativeLanguageOptions.alliteration) creativeOptions.push('alliteration');
-    if (creativeLanguageOptions.rhyming) creativeOptions.push('rhyming');
-    
-    if (creativeOptions.length > 0) {
-      systemMessage += ` Include ${creativeOptions.join(', ')}.`;
+    // Add creative language options
+    if (creativeLanguageOptions.wordInvention) {
+      if (captionLength === 'single-word') {
+        systemMessage += ' Create a completely new, invented word that captures the essence of the image.';
+      } else if (captionLength === 'micro') {
+        systemMessage += ' Include at least one invented word that combines existing words in a clever way.';
+      } else {
+        systemMessage += ' Include 2-3 creatively invented words or word combinations throughout the caption, with subtle context clues to hint at their meaning.';
+      }
     }
     
-    // Format requirements - keep it minimal but clear
-    systemMessage += `\n\nReturn exactly 5 captions as JSON: {"captions":[{"text":"caption text","category":"category","hashtags":${includeHashtags ? '["tag1","tag2"]' : '[]'},"emojis":${includeEmojis ? '["emoji1","emoji2"]' : '[]'},"viral_score":7}]}`;
-
-    // Cost-saving measure: Limit token usage
-    const MAX_TOKENS = 500; // Reduced from 800
-
+    if (creativeLanguageOptions.alliteration) {
+      if (captionLength === 'single-word' || captionLength === 'micro') {
+        systemMessage += ' Use strong alliteration in the few words you have.';
+      } else if (captionLength === 'short') {
+        systemMessage += ' Use alliteration for at least 3-4 consecutive words in the caption.';
+      } else {
+        systemMessage += ' Use multiple instances of alliteration throughout the caption, with at least one sequence of 4+ consecutive words using the same starting sound.';
+      }
+    }
+    
+    if (creativeLanguageOptions.rhyming) {
+      if (captionLength === 'single-word' || captionLength === 'micro') {
+        systemMessage += ' Make sure the words rhyme with each other if possible.';
+      } else if (captionLength === 'short') {
+        systemMessage += ' Include at least one rhyming pair within the caption.';
+      } else {
+        systemMessage += ' Structure the caption with multiple rhyming elements, creating an almost poem-like flow with at least 2-3 rhyming pairs.';
+      }
+    }
+    
+    // Add video-specific instructions
+    if (isVideo) {
+      systemMessage += ' This is a video, so reference motion or action.';
+    }
+    
+    // Format requirements
+    systemMessage += ` Return 5 captions as JSON: {"captions":[{"text":"caption text WITHOUT any emojis or hashtags","category":"category","hashtags":${includeHashtags ? '["tag1","tag2"] (without # symbol)' : '[]'},"emojis":${includeEmojis ? '["emoji1","emoji2"] (just the emoji characters)' : '[]'},"viral_score":7}]}`;
+    
+    // Add instruction to avoid content moderation responses
+    systemMessage += ` IMPORTANT: Do NOT respond with "I can't identify people" or similar refusals. Your task is to create captions, not identify individuals. If you see people, simply create appropriate captions without identifying specific individuals.`;
+    
+    console.log('System message:', systemMessage);
+    
     // Create a timeout promise to prevent hanging requests
     const timeoutPromise = new Promise((_, reject) => {
       setTimeout(() => reject(new Error('OpenAI API request timed out')), 30000); // 30 second timeout
     });
 
-    // Create the actual API call promise
-    const apiCallPromise = getCachedChatCompletion({
-      model: "gpt-4o-mini", // Use the mini model to save costs
-      messages: [
-        { role: "system", content: systemMessage },
-        { 
-          role: "user", 
-          content: [
-            { type: "text", text: "Generate Instagram captions for this image:" },
-            { 
-              type: "image_url", 
-              image_url: { url: imageUri }
-            }
-          ]
-        }
-      ],
-      max_tokens: MAX_TOKENS,
-      temperature: 0.7,
-      timestamp: Date.now(), // Add timestamp to bypass cache
-    });
-
-    // Race the API call against the timeout
-    const response = await Promise.race([apiCallPromise, timeoutPromise])
-      .catch(error => {
-        console.error('Error during OpenAI request:', error);
-        // Return a fallback response
-        return {
-          choices: [
-            {
-              message: {
-                content: JSON.stringify({
-                  captions: [
-                    {
-                      text: error.message === 'OpenAI API request timed out' 
-                        ? "Request timed out. Please try again." 
-                        : "Unable to generate caption. Please try again.",
-                      category: "Error",
-                      hashtags: [],
-                      viral_score: 5
-                    }
-                  ]
-                })
-              }
-            }
-          ]
-        };
-      });
-
-    if (!response.choices || response.choices.length === 0) {
-      throw new Error('No response from OpenAI');
-    }
-
-    const content = response.choices[0].message.content;
+    // Try with different models in sequence
+    const models = ['gpt-4o', 'gpt-4o-mini'];
+    let lastError = null;
     
-    try {
-      // Parse the JSON response
-      const parsedResponse = extractJsonFromString(content);
-      
-      if (parsedResponse && parsedResponse.captions && Array.isArray(parsedResponse.captions)) {
-        // Map the captions to our Caption interface
-        return parsedResponse.captions.map((caption: any) => ({
-          id: Date.now().toString() + '-' + Math.random().toString(36).substring(2, 9),
-          text: caption.text || 'No caption text provided',
-          category: caption.category || tone,
-          hashtags: caption.hashtags || [],
-          emojis: caption.emojis || [],
-          createdAt: new Date(),
-          viral_score: caption.viral_score || 5,
-        }));
-      } else {
-        // Fallback if the response doesn't have the expected structure
-        return [{
-          id: Date.now().toString(),
-          text: content.substring(0, 200), // Use the raw content as a fallback
-          category: tone,
-          hashtags: [],
-          emojis: [],
-          createdAt: new Date(),
-          viral_score: 5,
-        }];
+    for (const model of models) {
+      try {
+        console.log(`Attempting with ${model} model`);
+        
+        // Create the API call promise
+        const apiCallPromise = getCachedChatCompletion({
+          model: model,
+          messages: [
+            { role: "system", content: systemMessage },
+            { 
+              role: "user", 
+              content: [
+                { type: "text", text: `Generate Instagram captions for this ${isVideo ? 'video' : 'image'}:` },
+                { 
+                  type: "image_url", 
+                  image_url: { url: imageUri }
+                }
+              ]
+            }
+          ],
+          max_tokens: 800,
+          temperature: 0.7,
+          timestamp: Date.now(), // Add timestamp to bypass cache
+        });
+
+        // Race the API call against the timeout
+        const response = await Promise.race([apiCallPromise, timeoutPromise]);
+        
+        if (response.choices && response.choices.length > 0) {
+          const content = response.choices[0].message.content;
+          console.log(`Raw OpenAI response (${model}):`, content);
+          
+          // Try to parse the response
+          const parsedResponse = extractJsonFromString(content);
+          
+          if (parsedResponse && parsedResponse.captions && Array.isArray(parsedResponse.captions) && parsedResponse.captions.length > 0) {
+            console.log(`Successfully parsed response from ${model}`);
+            
+            // Process and return captions
+            return processAndReturnCaptions(parsedResponse, tone, includeHashtags, includeEmojis, captionLength);
+          }
+        }
+        
+        // If we get here, the response wasn't valid, continue to next model
+        console.log(`Invalid response from ${model}, trying next model if available`);
+      } catch (error: any) {
+        console.log(`Error with ${model} model:`, error.message);
+        lastError = error;
+        // Continue to next model
       }
-    } catch (parseError) {
-      console.error('Error parsing OpenAI response:', parseError);
-      
-      // If we can't parse the JSON, return a fallback caption
-      return [{
-        id: Date.now().toString(),
-        text: 'Unable to generate caption. Please try again.',
-        category: tone,
-        hashtags: [],
-        emojis: [],
-        createdAt: new Date(),
-        viral_score: 5,
-      }];
     }
+    
+    // If we get here, all models failed
+    console.error('All models failed to generate captions');
+    
+    // Create a fallback caption
+    return createFallbackCaptions(tone, includeHashtags, includeEmojis, lastError?.message);
   } catch (error: any) {
     const openAIError = error as OpenAIError;
     console.error('OpenAI API Error:', openAIError);
@@ -388,22 +529,262 @@ export const generateCaption = async (
         captionLength, 
         spicyLevel, 
         captionStyle, 
-        creativeLanguageOptions, 
+        creativeLanguageOptions,
+        isVideo,
         retryCount + 1
       );
     }
     
     // Return a fallback caption if all retries fail
-    return [{
-      id: Date.now().toString(),
-      text: openAIError.message || 'Failed to generate caption. Please try again.',
-      category: 'Error',
-      hashtags: [],
-      emojis: [],
-      createdAt: new Date(),
-      viral_score: 5,
-    }];
+    return createFallbackCaptions(tone, includeHashtags, includeEmojis, openAIError.message);
   }
 };
+
+// Helper function to process and return captions
+function processAndReturnCaptions(
+  parsedResponse: any, 
+  tone: CaptionTone,
+  includeHashtags: boolean,
+  includeEmojis: boolean,
+  captionLength: CaptionLength
+): Caption[] {
+  try {
+    if (!parsedResponse || !parsedResponse.captions || !Array.isArray(parsedResponse.captions)) {
+      console.error('Invalid response structure:', parsedResponse);
+      return createFallbackCaptions(tone, includeHashtags, includeEmojis, 'Invalid response structure');
+    }
+    
+    if (parsedResponse.captions.length === 0) {
+      console.error('Empty captions array');
+      return createFallbackCaptions(tone, includeHashtags, includeEmojis, 'No captions generated');
+    }
+    
+    // Process captions based on length setting
+    const processedCaptions = parsedResponse.captions.map((caption: any) => {
+      try {
+        // Validate caption fields
+        caption = validateCaptionFields(caption);
+        
+        // Initialize arrays if they don't exist
+        caption.hashtags = Array.isArray(caption.hashtags) ? caption.hashtags : [];
+        caption.emojis = Array.isArray(caption.emojis) ? caption.emojis : [];
+        
+        // Extract any hashtags from the text and move them to the hashtags array
+        const hashtagRegex = /#(\w+)/g;
+        const hashtagMatches = caption.text.match(hashtagRegex) || [];
+        
+        if (hashtagMatches.length > 0 && includeHashtags) {
+          // Remove hashtags from text
+          caption.text = caption.text.replace(hashtagRegex, '').trim();
+          
+          // Add hashtags to the hashtags array if they're not already there
+          hashtagMatches.forEach((hashtag: string) => {
+            const tag = hashtag.substring(1); // Remove the # symbol
+            if (!caption.hashtags.includes(tag)) {
+              caption.hashtags.push(tag);
+            }
+          });
+        }
+        
+        // Check if the caption already has emojis in the text and move them to the emojis array
+        const emojiRegex = /[\p{Emoji}]/gu;
+        const emojisInText = caption.text.match(emojiRegex) || [];
+        
+        if (emojisInText.length > 0 && includeEmojis) {
+          // Remove emojis from text
+          caption.text = caption.text.replace(emojiRegex, '').trim();
+          
+          // Add emojis to the emojis array if they're not already there
+          emojisInText.forEach((emoji: string) => {
+            if (!caption.emojis.includes(emoji)) {
+              caption.emojis.push(emoji);
+            }
+          });
+        }
+        
+        // Process caption text based on length setting
+        const words = caption.text.split(/\s+/).filter((word: string) => word.length > 0);
+        
+        if (captionLength === 'single-word') {
+          // For single-word, ensure it's exactly one word
+          if (words.length !== 1) {
+            caption.text = words[0] || 'Amazing';
+          }
+        } else if (captionLength === 'micro') {
+          // For micro, ensure it's 2-3 words
+          if (words.length < 2) {
+            // If fewer than 2 words, add a generic word that makes sense
+            const genericWords = ['vibes', 'mood', 'energy', 'moment'];
+            caption.text = words.concat([genericWords[Math.floor(Math.random() * genericWords.length)]]).join(' ');
+          } else if (words.length > 3) {
+            // If more than 3 words, truncate to exactly 3
+            caption.text = words.slice(0, 3).join(' ');
+          } else {
+            // If 2-3 words, keep as is
+            caption.text = words.join(' ');
+          }
+        } else if (captionLength === 'short') {
+          // For short, ensure it's 10-15 words
+          if (words.length < 10) {
+            // If fewer than 10 words, don't pad - just keep what we have
+            caption.text = words.join(' ');
+          } else if (words.length > 15) {
+            // If more than 15 words, truncate to exactly 15
+            caption.text = words.slice(0, 15).join(' ');
+          } else {
+            // If 10-15 words, keep as is
+            caption.text = words.join(' ');
+          }
+        } else if (captionLength === 'medium') {
+          // For medium, ensure it's 25-40 words
+          if (words.length < 25) {
+            // If fewer than 25 words, don't pad - just keep what we have
+            caption.text = words.join(' ');
+          } else if (words.length > 40) {
+            // If more than 40 words, truncate to exactly 40
+            caption.text = words.slice(0, 40).join(' ');
+          } else {
+            // If 25-40 words, keep as is
+            caption.text = words.join(' ');
+          }
+        } else if (captionLength === 'long') {
+          // For long, ensure it's 50-75 words
+          if (words.length < 50) {
+            // If fewer than 50 words, don't pad - just keep what we have
+            caption.text = words.join(' ');
+          } else if (words.length > 75) {
+            // If more than 75 words, truncate to exactly 75
+            caption.text = words.slice(0, 75).join(' ');
+          } else {
+            // If 50-75 words, keep as is
+            caption.text = words.join(' ');
+          }
+        }
+        
+        // Clean up the text - remove any double spaces
+        caption.text = caption.text.replace(/\s+/g, ' ').trim();
+        
+        // Make sure hashtags don't have the # symbol
+        caption.hashtags = caption.hashtags.map((tag: string) => tag.replace(/^#/, ''));
+        
+        // Filter out empty hashtags
+        caption.hashtags = caption.hashtags.filter((tag: string) => tag.trim().length > 0);
+        
+        // Filter out empty emojis
+        caption.emojis = caption.emojis.filter((emoji: string) => emoji.trim().length > 0);
+        
+        return caption;
+      } catch (captionError) {
+        console.error('Error processing individual caption:', captionError);
+        // Return a valid caption object even if processing fails
+        return {
+          text: 'Caption processing error',
+          category: tone,
+          hashtags: includeHashtags ? ['error'] : [],
+          emojis: includeEmojis ? ['⚠️'] : [],
+          viral_score: 5
+        };
+      }
+    });
+    
+    // Filter out any invalid captions
+    const validCaptions = processedCaptions.filter((caption: any) => 
+      caption && typeof caption.text === 'string' && caption.text.trim().length > 0
+    );
+    
+    if (validCaptions.length === 0) {
+      console.error('No valid captions after processing');
+      return createFallbackCaptions(tone, includeHashtags, includeEmojis, 'No valid captions after processing');
+    }
+    
+    // Map the captions to our Caption interface
+    return validCaptions.map((caption: any) => ({
+      id: Date.now().toString() + '-' + Math.random().toString(36).substring(2, 9),
+      text: caption.text || 'No caption text provided',
+      category: caption.category || tone,
+      hashtags: caption.hashtags || [],
+      emojis: caption.emojis || [],
+      createdAt: new Date(),
+      viral_score: typeof caption.viral_score === 'number' ? caption.viral_score : 5,
+    }));
+  } catch (error) {
+    console.error('Error in processAndReturnCaptions:', error);
+    return createFallbackCaptions(tone, includeHashtags, includeEmojis, 'Error processing captions');
+  }
+}
+
+// Helper function to create fallback captions
+function createFallbackCaptions(
+  tone: CaptionTone,
+  includeHashtags: boolean,
+  includeEmojis: boolean,
+  errorMessage?: string
+): Caption[] {
+  // Create a set of generic captions based on the tone
+  const genericCaptions = [
+    {
+      text: tone === 'casual' ? 'Living in the moment' : 
+            tone === 'professional' ? 'Professional excellence' :
+            tone === 'funny' ? 'Making memories and laughs' :
+            tone === 'inspirational' ? 'Inspiring new heights' :
+            tone === 'storytelling' ? 'Every picture tells a story' :
+            tone === 'Witty & Sarcastic' ? 'Just another day in paradise' :
+            tone === 'Aesthetic & Artsy' ? 'Finding beauty in simplicity' :
+            tone === 'Deep & Thoughtful' ? 'Moments that define us' :
+            tone === 'Trend & Pop Culture-Based' ? 'Vibing with the moment' :
+            tone === 'Minimal & Classy' ? 'Less is more' :
+            tone === 'Cool & Attitude' ? 'Own your moment' : 'Capturing moments',
+      category: typeof tone === 'string' ? tone : 'casual',
+      hashtags: includeHashtags ? ['moment', 'lifestyle', 'photooftheday'] : [],
+      emojis: includeEmojis ? ['✨', '📸'] : [],
+      viral_score: 7
+    },
+    {
+      text: tone === 'casual' ? 'Everyday adventures' : 
+            tone === 'professional' ? 'Dedication to craft' :
+            tone === 'funny' ? 'Smile through life' :
+            tone === 'inspirational' ? 'Reaching for stars' :
+            tone === 'storytelling' ? 'Chapter of my journey' :
+            tone === 'Witty & Sarcastic' ? 'Pretending to have it all together' :
+            tone === 'Aesthetic & Artsy' ? 'Colors of my world' :
+            tone === 'Deep & Thoughtful' ? 'In the depths of thought' :
+            tone === 'Trend & Pop Culture-Based' ? 'Main character energy' :
+            tone === 'Minimal & Classy' ? 'Simplicity speaks volumes' :
+            tone === 'Cool & Attitude' ? 'Attitude is everything' : 'Perfect day',
+      category: typeof tone === 'string' ? tone : 'casual',
+      hashtags: includeHashtags ? ['adventure', 'journey', 'memories'] : [],
+      emojis: includeEmojis ? ['🌟', '🙌'] : [],
+      viral_score: 6
+    },
+    {
+      text: tone === 'casual' ? 'Good vibes only' : 
+            tone === 'professional' ? 'Committed to excellence' :
+            tone === 'funny' ? 'Finding humor everywhere' :
+            tone === 'inspirational' ? 'Dream big always' :
+            tone === 'storytelling' ? 'Writing my own story' :
+            tone === 'Witty & Sarcastic' ? 'Living my best life (or trying to)' :
+            tone === 'Aesthetic & Artsy' ? 'Framing moments in time' :
+            tone === 'Deep & Thoughtful' ? 'Reflections of the soul' :
+            tone === 'Trend & Pop Culture-Based' ? 'Keeping it 100' :
+            tone === 'Minimal & Classy' ? 'Elegance in simplicity' :
+            tone === 'Cool & Attitude' ? 'Unapologetically me' : 'Enjoying life',
+      category: typeof tone === 'string' ? tone : 'casual',
+      hashtags: includeHashtags ? ['goodvibes', 'positivity', 'lifestyle'] : [],
+      emojis: includeEmojis ? ['😊', '✌️'] : [],
+      viral_score: 8
+    }
+  ];
+  
+  // Map to Caption interface
+  return genericCaptions.map(caption => ({
+    id: Date.now().toString() + '-' + Math.random().toString(36).substring(2, 9),
+    text: caption.text,
+    category: caption.category,
+    hashtags: caption.hashtags,
+    emojis: caption.emojis,
+    createdAt: new Date(),
+    viral_score: caption.viral_score
+  }));
+}
 
 export default openai; 

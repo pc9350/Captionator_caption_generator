@@ -2,6 +2,7 @@ import * as FileSystem from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { Platform } from 'react-native';
+import * as VideoThumbnails from 'expo-video-thumbnails';
 
 // Maximum dimensions for images to be sent to OpenAI API
 // Reduced dimensions to save tokens
@@ -113,17 +114,62 @@ export const takePhoto = async (): Promise<{ uri: string; base64: string; isVide
 export const processImage = async (uri: string): Promise<string> => {
   try {
     // Check if the URI is for a video
-    const isVideo = uri.endsWith('.mp4') || uri.endsWith('.mov') || uri.includes('video');
+    const isVideo = uri.endsWith('.mp4') || uri.endsWith('.mov') || uri.endsWith('.avi') || uri.endsWith('.wmv') || uri.includes('video');
     
     if (isVideo) {
-      // For videos, return a placeholder base64 image
-      // This is a simplified approach - in a real app, you'd generate a proper thumbnail
-      // Return a small placeholder image for videos to avoid processing errors
-      return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+      console.log('Processing video thumbnail from:', uri);
+      
+      try {
+        // Generate a thumbnail from the video using expo-video-thumbnails
+        const { uri: thumbnailUri } = await VideoThumbnails.getThumbnailAsync(uri, {
+          time: 1000, // Get thumbnail from 1 second into the video
+          quality: 0.7,
+        });
+        
+        console.log('Video thumbnail generated:', thumbnailUri);
+        
+        // Resize the thumbnail to meet our requirements
+        const resizedImage = await ImageManipulator.manipulateAsync(
+          thumbnailUri,
+          [{ resize: { width: MAX_WIDTH, height: MAX_HEIGHT } }],
+          { compress: IMAGE_QUALITY, format: ImageManipulator.SaveFormat.JPEG }
+        );
+        
+        // Convert the resized thumbnail to base64
+        const base64 = await FileSystem.readAsStringAsync(resizedImage.uri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        
+        console.log('Video thumbnail processed successfully');
+        return `data:image/jpeg;base64,${base64}`;
+      } catch (thumbnailError) {
+        console.error('Error generating video thumbnail:', thumbnailError);
+        
+        // Fallback to the old method if thumbnail generation fails
+        try {
+          console.log('Falling back to direct manipulation of video file');
+          const resizedImage = await ImageManipulator.manipulateAsync(
+            uri,
+            [{ resize: { width: MAX_WIDTH, height: MAX_HEIGHT } }],
+            { compress: IMAGE_QUALITY, format: ImageManipulator.SaveFormat.JPEG }
+          );
+          
+          const base64 = await FileSystem.readAsStringAsync(resizedImage.uri, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+          
+          return `data:image/jpeg;base64,${base64}`;
+        } catch (fallbackError) {
+          console.error('Fallback method also failed:', fallbackError);
+          // Return a placeholder image if all methods fail
+          return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+        }
+      }
     }
     
     // For images, resize to reduce token usage
     try {
+      console.log('Processing image');
       const resizedImage = await ImageManipulator.manipulateAsync(
         uri,
         [{ resize: { width: MAX_WIDTH, height: MAX_HEIGHT } }],

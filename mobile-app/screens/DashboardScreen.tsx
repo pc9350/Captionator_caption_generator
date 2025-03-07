@@ -118,19 +118,34 @@ const DashboardScreen = () => {
     removeUploadedMedia(index);
   };
 
-  const handleGenerateCaption = async () => {
+  const handleGenerateCaption = async (retryCount = 0, maxRetries = 2) => {
     if (uploadedMedia.length === 0) {
       setError('Please upload at least one image or video');
       return;
     }
     
-    setIsGenerating(true);
-    setError(null);
+    if (retryCount === 0) {
+      // Only show loading indicator on first attempt
+      setIsGenerating(true);
+      setError(null);
+    } else {
+      console.log(`Retry attempt ${retryCount} of ${maxRetries}...`);
+    }
     
     try {
       const currentMedia = uploadedMedia[activeMediaIndex];
-      const generatedCaptions = await generateCaption(
-        currentMedia.base64,
+      
+      // Check if the media is valid
+      if (!currentMedia || !currentMedia.uri || !currentMedia.base64) {
+        console.error('Invalid media data');
+        setError('The selected media appears to be invalid. Please try uploading again.');
+        setIsGenerating(false);
+        return;
+      }
+      
+      console.log(`Generating caption for ${currentMedia.isVideo ? 'video' : 'image'}`);
+      console.log('Media URI:', currentMedia.uri);
+      console.log('Settings:', {
         tone,
         includeHashtags,
         includeEmojis,
@@ -138,25 +153,90 @@ const DashboardScreen = () => {
         spicyLevel,
         captionStyle,
         creativeLanguageOptions
+      });
+      
+      // Add a timeout to prevent hanging requests
+      const timeoutPromise = new Promise<Caption[]>((_, reject) => {
+        setTimeout(() => reject(new Error('Caption generation timed out')), 45000); // 45 second timeout
+      });
+      
+      // Create the caption generation promise
+      const captionPromise = generateCaption(
+        currentMedia.base64,
+        tone,
+        includeHashtags,
+        includeEmojis,
+        captionLength,
+        spicyLevel,
+        captionStyle,
+        creativeLanguageOptions,
+        currentMedia.isVideo,
+        retryCount
       );
       
-      if (generatedCaptions.length === 0) {
-        setError('No captions were generated. Please try again.');
-      } else if (generatedCaptions.length === 1 && generatedCaptions[0].category === 'Error') {
-        setError(generatedCaptions[0].text);
+      // Race the caption generation against the timeout
+      const generatedCaptions = await Promise.race([captionPromise, timeoutPromise]);
+      
+      console.log(`Received ${generatedCaptions.length} captions`);
+      
+      // Check if we got valid captions
+      if (!generatedCaptions || generatedCaptions.length === 0) {
+        console.error('No captions were generated');
+        
+        // Retry automatically if we haven't reached max retries
+        if (retryCount < maxRetries) {
+          console.log(`Retrying caption generation (${retryCount + 1}/${maxRetries})...`);
+          return handleGenerateCaption(retryCount + 1, maxRetries);
+        }
+        
+        // Only show error if all retries failed
+        setError('No captions were generated. Please try again with a different image or settings.');
+      } else if (generatedCaptions.length === 1 && 
+                (generatedCaptions[0].category === 'Error' || 
+                 generatedCaptions[0].text.includes('Unable to generate'))) {
+        console.error('Error caption received:', generatedCaptions[0].text);
+        
+        // Retry automatically if we haven't reached max retries
+        if (retryCount < maxRetries) {
+          console.log(`Retrying caption generation (${retryCount + 1}/${maxRetries})...`);
+          return handleGenerateCaption(retryCount + 1, maxRetries);
+        }
+        
+        // Only show error if all retries failed
+        setError('Unable to generate captions. Please try again with a different image or settings.');
       } else {
+        console.log('Caption generation successful');
         setGeneratedCaptions(generatedCaptions);
+        setError(null); // Clear any previous errors
       }
     } catch (error: any) {
       console.error('Error generating caption:', error);
       
-      if (error.message && error.message.includes('maximum context length')) {
-        setError('Image is too complex. Please try a different image or reduce image quality.');
+      // Retry automatically if we haven't reached max retries
+      if (retryCount < maxRetries) {
+        console.log(`Retrying caption generation (${retryCount + 1}/${maxRetries})...`);
+        return handleGenerateCaption(retryCount + 1, maxRetries);
+      }
+      
+      // Only show error if all retries failed
+      if (error.message) {
+        if (error.message.includes('maximum context length')) {
+          setError('Image is too complex. Please try a different image or reduce image quality.');
+        } else if (error.message.includes('timed out')) {
+          setError('Caption generation timed out. Please check your internet connection and try again.');
+        } else if (error.message.includes('rate limit')) {
+          setError('Rate limit exceeded. Please wait a moment and try again.');
+        } else {
+          setError(`Failed to generate caption: ${error.message}`);
+        }
       } else {
         setError('Failed to generate caption. Please try again.');
       }
     } finally {
-      setIsGenerating(false);
+      if (retryCount === 0 || retryCount === maxRetries) {
+        // Only update loading state on first attempt or after all retries
+        setIsGenerating(false);
+      }
     }
   };
 
@@ -167,15 +247,42 @@ const DashboardScreen = () => {
     }
     
     try {
+      // Show a saving indicator
+      setIsGenerating(true); // Reuse the loading state
+      
       const success = await saveCaptionToFirebase(caption);
+      
+      // Hide the saving indicator
+      setIsGenerating(false);
+      
       if (success) {
-        Alert.alert('Success', 'Caption saved successfully!');
+        // Use a more subtle notification
+        Alert.alert(
+          'Caption Saved', 
+          'Your caption has been saved to your account.',
+          [{ text: 'OK' }],
+          { cancelable: true }
+        );
       } else {
-        Alert.alert('Error', 'Failed to save caption. Please try again.');
+        Alert.alert(
+          'Save Failed', 
+          'Unable to save your caption. Please try again.',
+          [{ text: 'OK' }],
+          { cancelable: true }
+        );
       }
     } catch (error) {
       console.error('Error saving caption:', error);
-      Alert.alert('Error', 'Failed to save caption. Please try again.');
+      
+      // Hide the saving indicator
+      setIsGenerating(false);
+      
+      Alert.alert(
+        'Save Error', 
+        'An error occurred while saving your caption. Please try again later.',
+        [{ text: 'OK' }],
+        { cancelable: true }
+      );
     }
   };
 
@@ -209,6 +316,16 @@ const DashboardScreen = () => {
   // Handle video play
   const handlePlayVideo = () => {
     if (uploadedMedia.length > 0 && uploadedMedia[activeMediaIndex].isVideo) {
+      // Check if the video URI is valid
+      const videoUri = uploadedMedia[activeMediaIndex].uri;
+      if (!videoUri) {
+        Alert.alert('Error', 'Video file not found or corrupted. Please try uploading again.');
+        return;
+      }
+      
+      console.log('Playing video:', videoUri);
+      
+      // Reset video state
       setVideoError(null);
       setIsVideoLoading(true);
       setVideoModalVisible(true);
@@ -340,7 +457,27 @@ const DashboardScreen = () => {
         {error && (
           <View style={styles.errorContainer}>
             <Ionicons name="alert-circle-outline" size={24} color="#ef4444" />
-            <Text style={styles.errorText}>{error}</Text>
+            <View style={styles.errorTextContainer}>
+              <Text style={styles.errorText}>{error}</Text>
+              {error.includes('Unable to generate') && (
+                <Text style={styles.errorHelpText}>
+                  This could be due to server load or connection issues. Try again with a different image or adjust your caption settings.
+                </Text>
+              )}
+              {error.includes('timed out') && (
+                <Text style={styles.errorHelpText}>
+                  Check your internet connection and try again. If the problem persists, try a different image or reduce image quality.
+                </Text>
+              )}
+              <TouchableOpacity 
+                style={styles.retryButton}
+                onPress={() => handleGenerateCaption()}
+                disabled={isGenerating}
+              >
+                <Ionicons name="refresh-outline" size={16} color="#4338ca" />
+                <Text style={styles.retryButtonText}>Try Again</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
 
@@ -350,7 +487,7 @@ const DashboardScreen = () => {
             styles.generateButton, 
             (uploadedMedia.length === 0 || isGenerating) && styles.generateButtonDisabled
           ]}
-          onPress={handleGenerateCaption}
+          onPress={() => handleGenerateCaption()}
           disabled={uploadedMedia.length === 0 || isGenerating}
         >
           {isGenerating ? (
@@ -404,6 +541,7 @@ const DashboardScreen = () => {
                   onLoad={() => {
                     setIsVideoLoading(false);
                     setVideoError(null);
+                    console.log('Video loaded successfully');
                   }}
                   onError={(error) => {
                     console.error('Video playback error:', error);
@@ -426,6 +564,7 @@ const DashboardScreen = () => {
                       onPress={() => {
                         setIsVideoLoading(true);
                         setVideoError(null);
+                        console.log('Attempting to reload video');
                         // Attempt to reload the video
                         if (videoRef.current) {
                           videoRef.current.loadAsync(
@@ -445,6 +584,7 @@ const DashboardScreen = () => {
             <TouchableOpacity 
               style={styles.closeButton}
               onPress={() => {
+                console.log('Closing video modal');
                 setVideoModalVisible(false);
                 setIsVideoLoading(true); // Reset loading state for next time
                 setVideoError(null);
@@ -626,20 +766,29 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   errorContainer: {
-    backgroundColor: '#fee2e2',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    backgroundColor: '#fee2e2',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: '#fecaca',
+  },
+  errorTextContainer: {
+    flex: 1,
+    marginLeft: 8,
   },
   errorText: {
     color: '#b91c1c',
     fontSize: 14,
-    marginLeft: 8,
-    flex: 1,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  errorHelpText: {
+    color: '#6b7280',
+    fontSize: 12,
+    lineHeight: 16,
   },
   generateButton: {
     backgroundColor: '#6366f1',
@@ -747,6 +896,24 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: '600',
     fontSize: 14,
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#eef2ff',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+    marginTop: 10,
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: '#e0e7ff',
+  },
+  retryButtonText: {
+    color: '#4338ca',
+    fontWeight: '600',
+    fontSize: 14,
+    marginLeft: 6,
   },
 });
 
