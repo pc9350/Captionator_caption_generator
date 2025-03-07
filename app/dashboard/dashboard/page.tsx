@@ -63,7 +63,7 @@ export default function Dashboard() {
                 : 'Instagram Caption Generator'}
             </h1>
             <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto text-lg">
-              Upload an image and our AI will generate engaging, context-aware captions for your Instagram posts.
+              Upload images or a video and our AI will generate engaging, context-aware captions for your Instagram posts.
             </p>
           </motion.div>
 

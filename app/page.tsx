@@ -30,10 +30,10 @@ export default function Home() {
                 AI-Powered Caption Generator
               </div>
               <h1 className="text-3xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 leading-tight pb-2">
-                Perfect Captions for Any Image
+                Perfect Captions for Images & Videos
               </h1>
               <p className="text-sm sm:text-base md:text-lg text-gray-700 dark:text-gray-300 leading-relaxed">
-                Transform your social media presence with AI-generated captions that perfectly match your content, style, and tone.
+                Transform your social media presence with AI-generated captions that perfectly match your photos, videos, and content style.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start">
                 <Link

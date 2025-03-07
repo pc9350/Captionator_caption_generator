@@ -29,7 +29,7 @@ export default function Footer() {
               </h3>
             </div>
             <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md">
-              Generate engaging, context-aware captions for any social media platform with AI. Upload your images and get captions that match your style and tone.
+              Generate engaging, context-aware captions for any social media platform with AI. Upload your photos or videos and get captions that match your style and tone.
             </p>
             <div className="flex space-x-4">
               <motion.a

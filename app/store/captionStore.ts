@@ -7,10 +7,11 @@ interface UploadedImage {
   file: File;
   url: string;  // Blob URL for UI display
   base64: string; // Base64 string for API requests
+  isVideo?: boolean; // Flag to indicate if this is a video
 }
 
 // Define caption length type
-export type CaptionLength = 'micro' | 'short' | 'medium' | 'long';
+export type CaptionLength = 'single-word' | 'micro' | 'short' | 'medium' | 'long';
 
 // Define spicy level type
 export type SpicyLevel = 'none' | 'mild' | 'medium' | 'spicy' | 'extra-spicy';
