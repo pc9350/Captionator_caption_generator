@@ -21,11 +21,15 @@ import AnimatedCaption from '../components/AnimatedCaption';
 import LottieView from 'lottie-react-native';
 import AnimatedCaptionCard from '../components/AnimatedCaptionCard';
 import AnimatedButton from '../components/AnimatedButton';
+import FloatingNavbar from '../components/FloatingNavbar';
+import { useAuth } from '../hooks/useAuth';
 
 const { width, height } = Dimensions.get('window');
 
 const HomeScreen = () => {
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
+  const { user } = useAuth();
+  const isAuthenticated = !!user;
   const [mainLikes, setMainLikes] = useState(1247);
   const [isLiked, setIsLiked] = useState(false);
   
@@ -389,6 +393,7 @@ const HomeScreen = () => {
             isLiked={isLiked}
             onShare={() => {}}
             onSave={() => {}}
+            keepAnimation={true}
           />
         </Animated.View>
         
@@ -467,32 +472,37 @@ const HomeScreen = () => {
           </View>
         </Animated.View>
         
-        {/* Final CTA */}
-        <Animated.View 
-          style={[
-            styles.finalCTA,
-            {
-              opacity: fadeAnim,
-              transform: [
-                { scale: scaleAnim },
-                { translateY: translateY },
-              ]
-            }
-          ]}
-        >
-          <BlurView intensity={60} tint="dark" style={styles.finalCTABlur}>
-            <Text style={styles.finalCTATitle}>Ready to Transform Your Social Media?</Text>
-            <AnimatedButton
-              title="Get Started Now"
-              onPress={navigateToAuth}
-              primary={true}
-              icon="flash-outline"
-              size="large"
-              fullWidth={true}
-            />
-          </BlurView>
-        </Animated.View>
+        {/* Final CTA - Only show for non-authenticated users */}
+        {!isAuthenticated && (
+          <Animated.View 
+            style={[
+              styles.finalCTA,
+              {
+                opacity: fadeAnim,
+                transform: [
+                  { scale: scaleAnim },
+                  { translateY: translateY },
+                ]
+              }
+            ]}
+          >
+            <BlurView intensity={60} tint="dark" style={styles.finalCTABlur}>
+              <Text style={styles.finalCTATitle}>Ready to Transform Your Social Media?</Text>
+              <AnimatedButton
+                title="Get Started Now"
+                onPress={navigateToAuth}
+                primary={true}
+                icon="flash-outline"
+                size="large"
+                fullWidth={true}
+              />
+            </BlurView>
+          </Animated.View>
+        )}
       </ScrollView>
+      
+      {/* Add the new FloatingNavbar */}
+      <FloatingNavbar />
     </SafeAreaView>
   );
 };

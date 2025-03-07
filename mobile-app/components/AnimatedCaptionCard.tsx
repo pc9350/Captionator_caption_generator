@@ -27,6 +27,7 @@ interface AnimatedCaptionCardProps {
   onShare?: () => void;
   onSave?: () => void;
   isSaved?: boolean;
+  keepAnimation?: boolean;
 }
 
 const AnimatedCaptionCard: React.FC<AnimatedCaptionCardProps> = ({
@@ -40,6 +41,7 @@ const AnimatedCaptionCard: React.FC<AnimatedCaptionCardProps> = ({
   onShare,
   onSave,
   isSaved = false,
+  keepAnimation = false,
 }) => {
   // Animation values
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
@@ -179,9 +181,10 @@ const AnimatedCaptionCard: React.FC<AnimatedCaptionCardProps> = ({
               typingSpeed={30}
               pauseDuration={3000}
               deletingSpeed={20}
-              textColor="#ffffff"
+              textColor={keepAnimation ? "#ffffff" : "#6366f1"}
               fontSize={14}
-              showCursor={true}
+              showCursor={keepAnimation}
+              isStatic={!keepAnimation}
               style={{ marginTop: 2 }}
             />
           </View>
@@ -274,9 +277,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '700',
     fontSize: 14,
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
   },
   captionContainer: {
     paddingHorizontal: 15,
@@ -288,9 +288,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 14,
     marginRight: 5,
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
+    marginBottom: 4,
   },
   captionTextContainer: {
     flex: 1,
@@ -305,15 +303,6 @@ const styles = StyleSheet.create({
   hashtag: {
     color: '#a5b4fc',
     fontWeight: '600',
-    fontSize: 14,
-    backgroundColor: 'rgba(99, 102, 241, 0.15)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    overflow: 'hidden',
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
   },
 });
 

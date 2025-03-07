@@ -188,6 +188,9 @@ const CaptionCard: React.FC<CaptionCardProps> = ({
             typingSpeed={30}
             pauseDuration={5000}
             deletingSpeed={0}
+            isStatic={true}
+            fontSize={16}
+            textColor="#6366f1"
           />
           
           {includeEmojis && caption.emojis && caption.emojis.length > 0 && (
@@ -201,7 +204,7 @@ const CaptionCard: React.FC<CaptionCardProps> = ({
           <View style={styles.hashtagsContainer}>
             {caption.hashtags.map((tag, index) => (
               <View key={index} style={styles.hashtagBadge}>
-                <Text style={styles.hashtagText}>#{tag}</Text>
+                <Text style={styles.hashtagText}>#{tag.replace(/^#/, '')}</Text>
               </View>
             ))}
           </View>
@@ -304,24 +307,33 @@ const styles = StyleSheet.create({
   emojiText: {
     fontSize: 16,
     marginTop: 8,
+    backgroundColor: 'rgba(79, 70, 229, 0.15)',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(79, 70, 229, 0.2)',
   },
   hashtagsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginTop: 8,
+    marginTop: 12,
   },
   hashtagBadge: {
-    backgroundColor: '#eff6ff',
-    paddingVertical: 4,
-    paddingHorizontal: 8,
+    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 12,
-    marginRight: 6,
-    marginBottom: 6,
+    marginRight: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(99, 102, 241, 0.3)',
   },
   hashtagText: {
+    color: '#6366f1',
     fontSize: 12,
-    color: '#3b82f6',
-    fontWeight: '500',
+    fontWeight: '600',
   },
 });
 

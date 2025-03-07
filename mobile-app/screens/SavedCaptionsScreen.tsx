@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFirebaseIntegration } from '../hooks/useFirebaseIntegration';
 import { useCaptionStore } from '../store/captionStore';
 import { Caption } from '../types/caption';
+import FloatingNavbar from '../components/FloatingNavbar';
 
 const SavedCaptionsScreen = () => {
   const { user } = useAuth();
@@ -118,7 +119,7 @@ const SavedCaptionsScreen = () => {
         )}
       </ScrollView>
       
-      <FooterNavbar />
+      <FloatingNavbar />
     </SafeAreaView>
   );
 };

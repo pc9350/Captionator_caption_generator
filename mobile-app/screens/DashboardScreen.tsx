@@ -31,6 +31,7 @@ import {
   CaptionStyle,
   CreativeLanguageOptions,
 } from '../types/caption';
+import FloatingNavbar from '../components/FloatingNavbar';
 
 const { width } = Dimensions.get('window');
 
@@ -343,7 +344,7 @@ const DashboardScreen = () => {
         )}
       </ScrollView>
       
-      <FooterNavbar />
+      <FloatingNavbar />
     </SafeAreaView>
   );
 };

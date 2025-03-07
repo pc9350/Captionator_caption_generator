@@ -79,10 +79,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 16,
-    height: 60,
+    height: 64, // Increase height to ensure back button is fully visible
   },
   backButton: {
-    padding: 4,
+    padding: 8, // Increase padding for larger touch area
+    marginLeft: -8, // Offset the padding to maintain alignment
+    width: 44, // Fixed width to ensure proper alignment
+    height: 44, // Fixed height to ensure proper alignment
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
     fontSize: 20,
@@ -92,7 +97,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   rightContainer: {
-    width: 28, // Same width as back button for balance
+    width: 44, // Same width as back button for balance
+    alignItems: 'center',
+    justifyContent: 'center',
   }
 });
 

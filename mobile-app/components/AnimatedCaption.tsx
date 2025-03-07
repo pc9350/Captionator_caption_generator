@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 
 interface AnimatedCaptionProps {
   captions: string[];
@@ -10,6 +11,7 @@ interface AnimatedCaptionProps {
   fontSize?: number;
   showCursor?: boolean;
   style?: any;
+  isStatic?: boolean;
 }
 
 const AnimatedCaption: React.FC<AnimatedCaptionProps> = ({ 
@@ -22,12 +24,13 @@ const AnimatedCaption: React.FC<AnimatedCaptionProps> = ({
   typingSpeed = 50,
   pauseDuration = 2000,
   deletingSpeed = 30,
-  textColor = '#ffffff',
+  textColor = '#6366f1',
   fontSize = 14,
   showCursor = true,
-  style
+  style,
+  isStatic = false
 }) => {
-  const [displayedText, setDisplayedText] = useState('');
+  const [displayedText, setDisplayedText] = useState(isStatic ? captions[0] : '');
   const [currentCaptionIndex, setCurrentCaptionIndex] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isWaiting, setIsWaiting] = useState(false);
@@ -75,7 +78,13 @@ const AnimatedCaption: React.FC<AnimatedCaptionProps> = ({
     displayedTextRef.current = displayedText;
   }, [currentCaptionIndex, isDeleting, isWaiting, displayedText]);
   
+  // Skip animation if isStatic is true
   useEffect(() => {
+    if (isStatic) {
+      setDisplayedText(captions[0]);
+      return;
+    }
+    
     const animateText = () => {
       const currentCaption = captions[currentIndexRef.current];
       
@@ -118,7 +127,7 @@ const AnimatedCaption: React.FC<AnimatedCaptionProps> = ({
     );
     
     return () => clearInterval(typingInterval);
-  }, [captions, typingSpeed, pauseDuration, deletingSpeed]);
+  }, [captions, typingSpeed, pauseDuration, deletingSpeed, isStatic]);
 
   // Process text to highlight hashtags
   const renderText = () => {
@@ -142,30 +151,30 @@ const AnimatedCaption: React.FC<AnimatedCaptionProps> = ({
   return (
     <View style={[styles.container, style]}>
       <View style={styles.captionContainer}>
-        <Text style={[
-          styles.caption, 
-          { 
-            fontSize, 
-            color: textColor,
-            textShadowColor: 'rgba(0, 0, 0, 0.5)',
-            textShadowOffset: { width: 1, height: 1 },
-            textShadowRadius: 3,
-          }
-        ]}>
-          {renderText()}
-        </Text>
-        {showCursor && (
-          <Animated.View 
-            style={[
-              styles.cursor, 
-              { 
-                opacity: cursorOpacity,
-                height: fontSize + 2,
-                backgroundColor: textColor
-              }
-            ]} 
-          />
-        )}
+        <View style={styles.textWrapper}>
+          <Text style={[
+            styles.caption, 
+            { 
+              fontSize, 
+              color: textColor,
+              fontWeight: '600',
+            }
+          ]}>
+            {renderText()}
+          </Text>
+          {showCursor && !isStatic && (
+            <Animated.View 
+              style={[
+                styles.cursor, 
+                { 
+                  opacity: cursorOpacity,
+                  height: fontSize + 2,
+                  backgroundColor: textColor
+                }
+              ]} 
+            />
+          )}
+        </View>
       </View>
     </View>
   );
@@ -179,6 +188,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  textWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 2,
+  },
   caption: {
     lineHeight: 20,
     flexShrink: 1,
@@ -190,7 +204,7 @@ const styles = StyleSheet.create({
   },
   hashtag: {
     color: '#a5b4fc',
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });
 

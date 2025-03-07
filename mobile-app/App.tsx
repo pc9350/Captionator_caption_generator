@@ -14,6 +14,10 @@ import DashboardScreen from './screens/DashboardScreen';
 import FeaturesScreen from './screens/FeaturesScreen';
 import SavedCaptionsScreen from './screens/SavedCaptionsScreen';
 import ProfileScreen from './screens/ProfileScreen';
+import EditProfileScreen from './screens/EditProfileScreen';
+import HelpSupportScreen from './screens/HelpSupportScreen';
+import PrivacyPolicyScreen from './screens/PrivacyPolicyScreen';
+import ChangePasswordScreen from './screens/ChangePasswordScreen';
 
 // Define the stack navigator types
 type RootStackParamList = {
@@ -23,6 +27,10 @@ type RootStackParamList = {
   Features: undefined;
   SavedCaptions: undefined;
   Profile: undefined;
+  EditProfile: undefined;
+  HelpSupport: undefined;
+  PrivacyPolicy: undefined;
+  ChangePassword: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -51,6 +59,10 @@ const AppStack = () => (
     <Stack.Screen name="Dashboard" component={DashboardScreen} />
     <Stack.Screen name="SavedCaptions" component={SavedCaptionsScreen} />
     <Stack.Screen name="Profile" component={ProfileScreen} />
+    <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+    <Stack.Screen name="HelpSupport" component={HelpSupportScreen} />
+    <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
+    <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
     <Stack.Screen name="Home" component={HomeScreen} />
     <Stack.Screen name="Features" component={FeaturesScreen} />
   </Stack.Navigator>

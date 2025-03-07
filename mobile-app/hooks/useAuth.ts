@@ -311,6 +311,48 @@ export const useAuth = () => {
     }
   };
 
+  const updateUserProfile = async (data: { displayName?: string; photoURL?: string }) => {
+    setState({ ...state, loading: true, error: null });
+    
+    try {
+      if (!auth) {
+        console.error('Firebase auth is not initialized');
+        setState({
+          ...state,
+          loading: false,
+          error: 'Firebase auth is not initialized',
+        });
+        throw new Error('Firebase auth is not initialized');
+      }
+      
+      if (!auth.currentUser) {
+        throw new Error('No user is currently logged in');
+      }
+      
+      await updateProfile(auth.currentUser, data);
+      
+      // Update the local state with the new profile data
+      setState({
+        user: auth.currentUser,
+        loading: false,
+        error: null,
+      });
+      
+      // Update the persisted user data
+      updatePersistedUser(auth.currentUser);
+      
+      return true;
+    } catch (error: any) {
+      console.error('Error updating profile:', error.message);
+      setState({
+        ...state,
+        loading: false,
+        error: error.message,
+      });
+      throw error;
+    }
+  };
+
   return {
     user: state.user,
     loading: state.loading,
@@ -319,5 +361,6 @@ export const useAuth = () => {
     login,
     logout,
     resetPassword,
+    updateUserProfile,
   };
 }; 

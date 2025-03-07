@@ -15,6 +15,8 @@ import LottieView from 'lottie-react-native';
 import Header from '../components/Header';
 import FooterNavbar from '../components/FooterNavbar';
 import AnimatedButton from '../components/AnimatedButton';
+import FloatingNavbar from '../components/FloatingNavbar';
+import { useAuth } from '../hooks/useAuth';
 
 const { width } = Dimensions.get('window');
 
@@ -60,6 +62,8 @@ const FEATURES = [
 
 const FeaturesScreen = () => {
   const navigation = useNavigation();
+  const { user } = useAuth();
+  const isAuthenticated = !!user;
 
   const navigateToAuth = () => {
     navigation.dispatch(
@@ -109,23 +113,25 @@ const FeaturesScreen = () => {
           ))}
         </View>
         
-        {/* Call to Action */}
-        <View style={styles.ctaSection}>
-          <Text style={styles.ctaTitle}>Ready to Get Started?</Text>
-          <Text style={styles.ctaSubtitle}>
-            Create your free account and start generating amazing captions today.
-          </Text>
-          <AnimatedButton
-            title="Sign Up Free"
-            onPress={navigateToAuth}
-            primary={true}
-            icon="person-add-outline"
-            size="medium"
-          />
-        </View>
+        {/* Call to Action - Only show for non-authenticated users */}
+        {!isAuthenticated && (
+          <View style={styles.ctaSection}>
+            <Text style={styles.ctaTitle}>Ready to Get Started?</Text>
+            <Text style={styles.ctaSubtitle}>
+              Create your free account and start generating amazing captions today.
+            </Text>
+            <AnimatedButton
+              title="Sign Up Free"
+              onPress={navigateToAuth}
+              primary={true}
+              icon="person-add-outline"
+              size="medium"
+            />
+          </View>
+        )}
       </ScrollView>
       
-      <FooterNavbar />
+      <FloatingNavbar />
     </SafeAreaView>
   );
 };

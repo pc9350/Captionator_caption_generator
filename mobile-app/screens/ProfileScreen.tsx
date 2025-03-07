@@ -14,11 +14,13 @@ import { useAuth } from '../hooks/useAuth';
 import Header from '../components/Header';
 import FooterNavbar from '../components/FooterNavbar';
 import { Ionicons } from '@expo/vector-icons';
+import FloatingNavbar from '../components/FloatingNavbar';
+import { useNavigation, CommonActions } from '@react-navigation/native';
 
 const ProfileScreen = () => {
   const { user, logout } = useAuth();
-  const [darkMode, setDarkMode] = React.useState(false);
   const [notifications, setNotifications] = React.useState(true);
+  const navigation = useNavigation();
 
   const handleLogout = async () => {
     Alert.alert(
@@ -42,6 +44,42 @@ const ProfileScreen = () => {
           style: 'destructive',
         },
       ]
+    );
+  };
+
+  const handleEditProfile = () => {
+    // Navigate to Edit Profile screen
+    navigation.dispatch(
+      CommonActions.navigate({
+        name: 'EditProfile'
+      })
+    );
+  };
+
+  const handlePrivacySettings = () => {
+    // Navigate to Privacy Policy screen
+    navigation.dispatch(
+      CommonActions.navigate({
+        name: 'PrivacyPolicy'
+      })
+    );
+  };
+
+  const handleHelpSupport = () => {
+    // Navigate to Help & Support screen
+    navigation.dispatch(
+      CommonActions.navigate({
+        name: 'HelpSupport'
+      })
+    );
+  };
+
+  const handleChangePassword = () => {
+    // Navigate to Change Password screen
+    navigation.dispatch(
+      CommonActions.navigate({
+        name: 'ChangePassword'
+      })
     );
   };
 
@@ -74,7 +112,10 @@ const ProfileScreen = () => {
             {user?.email || 'No email'}
           </Text>
           
-          <TouchableOpacity style={styles.editProfileButton}>
+          <TouchableOpacity 
+            style={styles.editProfileButton}
+            onPress={handleEditProfile}
+          >
             <Text style={styles.editProfileButtonText}>Edit Profile</Text>
           </TouchableOpacity>
         </View>
@@ -82,19 +123,6 @@ const ProfileScreen = () => {
         {/* Settings Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Settings</Text>
-          
-          <View style={styles.settingItem}>
-            <View style={styles.settingLeft}>
-              <Ionicons name="moon-outline" size={24} color="#4b5563" />
-              <Text style={styles.settingText}>Dark Mode</Text>
-            </View>
-            <Switch
-              value={darkMode}
-              onValueChange={setDarkMode}
-              trackColor={{ false: '#e5e7eb', true: '#a5b4fc' }}
-              thumbColor={darkMode ? '#4338ca' : '#f4f3f4'}
-            />
-          </View>
           
           <View style={styles.settingItem}>
             <View style={styles.settingLeft}>
@@ -114,19 +142,29 @@ const ProfileScreen = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account</Text>
           
-          <TouchableOpacity style={styles.accountItem}>
+          <TouchableOpacity 
+            style={styles.accountItem}
+            onPress={handleChangePassword}
+          >
             <Ionicons name="lock-closed-outline" size={24} color="#4b5563" />
             <Text style={styles.accountItemText}>Change Password</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity style={styles.accountItem}>
+          <TouchableOpacity 
+            style={styles.accountItem}
+            onPress={handlePrivacySettings}
+          >
             <Ionicons name="shield-checkmark-outline" size={24} color="#4b5563" />
             <Text style={styles.accountItemText}>Privacy Settings</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity style={styles.accountItem}>
+          <TouchableOpacity 
+            style={styles.accountItem}
+            onPress={handleHelpSupport}
+          >
             <Ionicons name="help-circle-outline" size={24} color="#4b5563" />
             <Text style={styles.accountItemText}>Help & Support</Text>
+            <Text style={styles.newFeatureBadge}>New</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -141,13 +179,16 @@ const ProfileScreen = () => {
         {/* App Info */}
         <View style={styles.appInfo}>
           <Text style={styles.appVersion}>Captionator v1.0.0</Text>
+          <TouchableOpacity onPress={handlePrivacySettings}>
+            <Text style={styles.privacyLink}>Privacy Policy</Text>
+          </TouchableOpacity>
           <Text style={styles.appCopyright}>
             © {new Date().getFullYear()} Captionator. All rights reserved.
           </Text>
         </View>
       </ScrollView>
       
-      <FooterNavbar />
+      <FloatingNavbar />
     </SafeAreaView>
   );
 };
@@ -265,6 +306,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#4b5563',
     marginLeft: 12,
+    flex: 1,
   },
   logoutItem: {
     borderBottomWidth: 0,
@@ -284,6 +326,22 @@ const styles = StyleSheet.create({
   appCopyright: {
     fontSize: 12,
     color: '#9ca3af',
+  },
+  privacyLink: {
+    fontSize: 14,
+    color: '#6366f1',
+    marginVertical: 8,
+    textDecorationLine: 'underline',
+  },
+  newFeatureBadge: {
+    fontSize: 12,
+    color: '#ffffff',
+    backgroundColor: '#10b981',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    overflow: 'hidden',
+    marginLeft: 8,
   },
 });
 
