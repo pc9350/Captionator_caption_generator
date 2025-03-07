@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   View, 
   Text, 
@@ -10,17 +10,21 @@ import {
   Platform,
   StatusBar,
   Dimensions,
-  ImageBackground,
 } from 'react-native';
 import { useNavigation, CommonActions } from '@react-navigation/native';
 import { APP_NAME } from '@env';
 import { useAuth } from '../hooks/useAuth';
+import AnimatedCaption from '../components/AnimatedCaption';
+import FooterNavbar from '../components/FooterNavbar';
+import { Ionicons } from '@expo/vector-icons';
 
 const { width, height } = Dimensions.get('window');
 
 const HomeScreen = () => {
   const navigation = useNavigation();
   const { user } = useAuth();
+  const [mainLikes, setMainLikes] = useState(1024);
+  const [isLiked, setIsLiked] = useState(false);
 
   // Redirect to Dashboard if user is already authenticated
   useEffect(() => {
@@ -42,6 +46,23 @@ const HomeScreen = () => {
     );
   };
 
+  const navigateToFeatures = () => {
+    navigation.dispatch(
+      CommonActions.navigate({
+        name: 'Features' as never,
+      })
+    );
+  };
+
+  const handleLike = () => {
+    if (isLiked) {
+      setMainLikes(prev => prev - 1);
+    } else {
+      setMainLikes(prev => prev + 1);
+    }
+    setIsLiked(!isLiked);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#4338ca" />
@@ -49,7 +70,14 @@ const HomeScreen = () => {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Captionator</Text>
+          <View style={styles.logoContainer}>
+            <Image 
+              source={require('../assets/images/captionator-logo.png')} 
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <Text style={styles.headerTitle}>Captionator</Text>
+          </View>
         </View>
         
         {/* Hero Section */}
@@ -61,55 +89,84 @@ const HomeScreen = () => {
               <Text style={styles.subtitle}>
                 Transform your social media presence with AI-generated captions that perfectly match your photos, videos, and content style.
               </Text>
-              <View style={styles.buttonContainer}>
-                <TouchableOpacity 
-                  style={styles.primaryButton}
-                  onPress={navigateToAuth}
-                >
-                  <Text style={styles.primaryButtonText}>Get Started Free</Text>
-                </TouchableOpacity>
-              </View>
             </View>
           </View>
         </View>
 
-        {/* Features Section */}
-        <View style={styles.featuresSection}>
-          <Text style={styles.sectionTitle}>Key Features</Text>
+        {/* Instagram Card Demo */}
+        <View style={styles.demoSection}>
+          <Text style={styles.demoTitle}>See How It Works</Text>
           
-          <View style={styles.featureCard}>
-            <View style={styles.featureIconContainer}>
-              <Text style={styles.featureIconText}>AI</Text>
+          <View style={styles.instagramCard}>
+            {/* Instagram Card Header */}
+            <View style={styles.cardHeader}>
+              <View style={styles.cardHeaderLeft}>
+                <View style={styles.profilePic}>
+                  <Image 
+                    source={require('../assets/images/captionator-logo.png')} 
+                    style={styles.profilePicImage}
+                    resizeMode="cover"
+                  />
+                </View>
+                <Text style={styles.username}>captionator_ai</Text>
+              </View>
+              <View style={styles.cardHeaderRight}>
+                <Ionicons name="ellipsis-horizontal" size={20} color="#1f2937" />
+              </View>
             </View>
-            <View style={styles.featureContent}>
-              <Text style={styles.featureTitle}>AI-Powered Captions</Text>
-              <Text style={styles.featureDescription}>
-                Generate engaging captions based on your images using advanced AI technology.
-              </Text>
+            
+            {/* Instagram Card Image */}
+            <View style={styles.cardImageContainer}>
+              <Image 
+                source={require('../assets/images/login-page-image.jpg')} 
+                style={styles.demoImage} 
+                resizeMode="cover"
+              />
             </View>
-          </View>
-          
-          <View style={styles.featureCard}>
-            <View style={styles.featureIconContainer}>
-              <Text style={styles.featureIconText}>🎭</Text>
+            
+            {/* Instagram Card Actions */}
+            <View style={styles.cardActions}>
+              <TouchableOpacity onPress={handleLike} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Ionicons 
+                  name={isLiked ? "heart" : "heart-outline"} 
+                  size={28} 
+                  color={isLiked ? "#ef4444" : "#1f2937"} 
+                  style={styles.actionIcon}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Ionicons name="chatbubble-outline" size={26} color="#1f2937" style={styles.actionIcon} />
+              </TouchableOpacity>
+              <TouchableOpacity hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Ionicons name="paper-plane-outline" size={26} color="#1f2937" style={styles.actionIcon} />
+              </TouchableOpacity>
+              <View style={styles.spacer} />
+              <TouchableOpacity hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Ionicons name="bookmark-outline" size={26} color="#1f2937" style={styles.actionIcon} />
+              </TouchableOpacity>
             </View>
-            <View style={styles.featureContent}>
-              <Text style={styles.featureTitle}>Multiple Tone Options</Text>
-              <Text style={styles.featureDescription}>
-                Choose from casual, professional, funny, inspirational, or storytelling tones.
-              </Text>
+            
+            {/* Instagram Card Likes */}
+            <View style={styles.likesContainer}>
+              <Text style={styles.likesText}>{mainLikes.toLocaleString()} likes</Text>
             </View>
-          </View>
-          
-          <View style={styles.featureCard}>
-            <View style={styles.featureIconContainer}>
-              <Text style={styles.featureIconText}>💾</Text>
-            </View>
-            <View style={styles.featureContent}>
-              <Text style={styles.featureTitle}>Save Favorite Captions</Text>
-              <Text style={styles.featureDescription}>
-                Save your favorite captions for later use and easy access.
-              </Text>
+            
+            {/* Instagram Card Caption */}
+            <View style={styles.cardCaption}>
+              <Text style={styles.captionUsername}>captionator_ai</Text>
+              <View style={styles.captionTextContainer}>
+                <AnimatedCaption 
+                  captions={[
+                    "Exploring new horizons, one step at a time. #adventure #journey",
+                    "Finding beauty in the everyday moments. #gratitude #mindfulness",
+                    "Living life in full color. #vibrant #authentic",
+                    "Making memories that last a lifetime. #memories #experiences"
+                  ]}
+                  typingSpeed={50}
+                  pauseDuration={2000}
+                  deletingSpeed={30}
+                />
+              </View>
             </View>
           </View>
         </View>
@@ -117,14 +174,24 @@ const HomeScreen = () => {
         {/* Call to Action */}
         <View style={styles.ctaSection}>
           <Text style={styles.ctaTitle}>Ready to Transform Your Social Media?</Text>
-          <TouchableOpacity 
-            style={styles.ctaButton}
-            onPress={navigateToAuth}
-          >
-            <Text style={styles.ctaButtonText}>Get Started Now</Text>
-          </TouchableOpacity>
+          <View style={styles.ctaButtons}>
+            <TouchableOpacity 
+              style={styles.primaryButton}
+              onPress={navigateToAuth}
+            >
+              <Text style={styles.primaryButtonText}>Get Started Free</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.secondaryButton}
+              onPress={navigateToFeatures}
+            >
+              <Text style={styles.secondaryButtonText}>Explore Features</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
+      
+      <FooterNavbar />
     </SafeAreaView>
   );
 };
@@ -136,12 +203,24 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
+    paddingBottom: 70, // Add padding for the footer navbar
   },
   header: {
     backgroundColor: '#4338ca',
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
     paddingHorizontal: 20,
     paddingVertical: 16,
+  },
+  logoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  logo: {
+    width: 32,
+    height: 32,
+    marginRight: 8,
+    borderRadius: 16,
+    backgroundColor: 'white',
   },
   headerTitle: {
     fontSize: 22,
@@ -186,79 +265,107 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     paddingHorizontal: 10,
   },
-  buttonContainer: {
-    width: '100%',
-    marginTop: 10,
-    alignItems: 'center',
-  },
-  primaryButton: {
-    backgroundColor: 'white',
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    width: '80%',
-    alignItems: 'center',
-  },
-  primaryButtonText: {
-    color: '#4338ca',
-    fontWeight: '600',
-    fontSize: 16,
-  },
-  featuresSection: {
+  demoSection: {
     padding: 20,
-    marginTop: 20,
+    alignItems: 'center',
   },
-  sectionTitle: {
-    fontSize: 24,
+  demoTitle: {
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#1f2937',
     marginBottom: 20,
     textAlign: 'center',
   },
-  featureCard: {
+  instagramCard: {
+    width: '100%',
+    maxWidth: 400,
     backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
+    borderRadius: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOpacity: 0.1,
+    shadowRadius: 15,
+    elevation: 5,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    overflow: 'hidden',
   },
-  featureIconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#f0f2ff',
-    justifyContent: 'center',
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginRight: 16,
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
   },
-  featureIconText: {
-    fontSize: 24,
-    color: '#4338ca',
+  cardHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  featureContent: {
-    flex: 1,
+  profilePic: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#e5e7eb',
+    marginRight: 10,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#f3f4f6',
   },
-  featureTitle: {
-    fontSize: 18,
+  profilePicImage: {
+    width: '100%',
+    height: '100%',
+  },
+  username: {
     fontWeight: '600',
     color: '#1f2937',
-    marginBottom: 6,
+    fontSize: 15,
   },
-  featureDescription: {
-    fontSize: 14,
-    color: '#6b7280',
-    lineHeight: 20,
+  cardHeaderRight: {},
+  cardImageContainer: {
+    width: '100%',
+    height: width * 0.8,
+    maxHeight: 400,
+    backgroundColor: '#f3f4f6',
+  },
+  demoImage: {
+    width: '100%',
+    height: '100%',
+  },
+  cardActions: {
+    flexDirection: 'row',
+    padding: 12,
+    alignItems: 'center',
+  },
+  actionIcon: {
+    marginRight: 16,
+  },
+  spacer: {
+    flex: 1,
+  },
+  likesContainer: {
+    paddingHorizontal: 12,
+    paddingBottom: 8,
+  },
+  likesText: {
+    fontWeight: '600',
+    color: '#1f2937',
+    fontSize: 15,
+  },
+  cardCaption: {
+    padding: 12,
+    paddingTop: 0,
+  },
+  captionUsername: {
+    fontWeight: '600',
+    color: '#1f2937',
+    marginBottom: 4,
+    fontSize: 15,
+  },
+  captionTextContainer: {
+    minHeight: 60,
+    justifyContent: 'center',
   },
   ctaSection: {
     backgroundColor: '#4338ca',
@@ -274,16 +381,41 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 20,
   },
-  ctaButton: {
+  ctaButtons: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  primaryButton: {
     backgroundColor: 'white',
     paddingVertical: 14,
     paddingHorizontal: 32,
     borderRadius: 12,
-    width: '80%',
+    width: '100%',
     alignItems: 'center',
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  ctaButtonText: {
+  primaryButtonText: {
     color: '#4338ca',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  secondaryButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    width: '100%',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
+  },
+  secondaryButtonText: {
+    color: 'white',
     fontWeight: '600',
     fontSize: 16,
   },

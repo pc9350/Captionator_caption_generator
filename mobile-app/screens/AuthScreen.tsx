@@ -17,6 +17,8 @@ import {
 } from 'react-native';
 import { useNavigation, CommonActions } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
+import Header from '../components/Header';
+import { Ionicons } from '@expo/vector-icons';
 
 type AuthMode = 'login' | 'signup' | 'reset';
 
@@ -29,6 +31,8 @@ const AuthScreen = () => {
   const [displayName, setDisplayName] = useState('');
   const [mode, setMode] = useState<AuthMode>('login');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
   const navigation = useNavigation();
   const { login, signup, resetPassword, error, user } = useAuth();
@@ -137,140 +141,163 @@ const AuthScreen = () => {
     if (newMode === 'login' || newMode === 'reset') {
       setDisplayName('');
     }
+    setShowPassword(false);
+    setShowConfirmPassword(false);
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
       
+      <Header title={mode === 'login' ? 'Login' : mode === 'signup' ? 'Sign Up' : 'Reset Password'} />
+      
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardAvoid}
       >
         <ScrollView contentContainerStyle={styles.scrollContent}>
-          {/* Logo and App Name */}
           <View style={styles.logoContainer}>
+            <Image 
+              source={require('../assets/images/captionator-logo.png')} 
+              style={styles.logo}
+              resizeMode="contain"
+            />
             <Text style={styles.logoText}>Captionator</Text>
-            <Text style={styles.logoSubtext}>AI-Powered Caption Generator</Text>
           </View>
           
+          <Text style={styles.welcomeText}>
+            {mode === 'login' ? 'Welcome Back!' : mode === 'signup' ? 'Create Your Account' : 'Reset Password'}
+          </Text>
+          <Text style={styles.subtitleText}>
+            {mode === 'login'
+              ? 'Sign in to continue generating amazing captions'
+              : mode === 'signup'
+              ? 'Join thousands of creators using AI-powered captions'
+              : 'Enter your email to reset your password'}
+          </Text>
+          
           <View style={styles.formContainer}>
-            <View style={styles.header}>
-              <Text style={styles.title}>
-                {mode === 'login' ? 'Welcome Back' : mode === 'signup' ? 'Create Account' : 'Reset Password'}
-              </Text>
-              <Text style={styles.subtitle}>
-                {mode === 'login'
-                  ? 'Sign in to continue using Captionator'
-                  : mode === 'signup'
-                  ? 'Create a new account to get started'
-                  : 'Enter your email to reset your password'}
-              </Text>
-            </View>
-
-            <View style={styles.form}>
-              {mode === 'signup' && (
-                <View style={styles.inputContainer}>
-                  <Text style={styles.label}>Name</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Your name"
-                    value={displayName}
-                    onChangeText={setDisplayName}
-                    autoCapitalize="words"
-                  />
-                </View>
-              )}
-
+            {mode === 'signup' && (
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>Email</Text>
+                <Text style={styles.label}>Name</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="your.email@example.com"
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
+                  placeholder="Your name"
+                  value={displayName}
+                  onChangeText={setDisplayName}
+                  autoCapitalize="words"
                 />
               </View>
+            )}
 
-              {mode !== 'reset' && (
-                <View style={styles.inputContainer}>
-                  <Text style={styles.label}>Password</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Your password"
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Email</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="your.email@example.com"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </View>
+
+            {mode !== 'reset' && (
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Password</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Your password"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                />
+                <TouchableOpacity 
+                  onPress={() => setShowPassword(!showPassword)}
+                  style={styles.eyeIcon}
+                >
+                  <Ionicons 
+                    name={showPassword ? "eye-off-outline" : "eye-outline"} 
+                    size={20} 
+                    color="#6b7280" 
                   />
-                </View>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {mode === 'signup' && (
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Confirm Password</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Confirm your password"
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  secureTextEntry={!showConfirmPassword}
+                />
+                <TouchableOpacity 
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  style={styles.eyeIcon}
+                >
+                  <Ionicons 
+                    name={showConfirmPassword ? "eye-off-outline" : "eye-outline"} 
+                    size={20} 
+                    color="#6b7280" 
+                  />
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {error && <Text style={styles.errorText}>{error}</Text>}
+
+            <TouchableOpacity
+              style={styles.submitButton}
+              onPress={handleSubmit}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <Text style={styles.submitButtonText}>
+                  {mode === 'login' ? 'Sign In' : mode === 'signup' ? 'Sign Up' : 'Reset Password'}
+                </Text>
+              )}
+            </TouchableOpacity>
+
+            <View style={styles.switchModeContainer}>
+              {mode === 'login' && (
+                <>
+                  <Text style={styles.switchModeText}>Don't have an account? </Text>
+                  <TouchableOpacity onPress={() => toggleMode('signup')}>
+                    <Text style={styles.switchModeLink}>Sign Up</Text>
+                  </TouchableOpacity>
+                </>
               )}
 
               {mode === 'signup' && (
-                <View style={styles.inputContainer}>
-                  <Text style={styles.label}>Confirm Password</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Confirm your password"
-                    value={confirmPassword}
-                    onChangeText={setConfirmPassword}
-                    secureTextEntry
-                  />
-                </View>
+                <>
+                  <Text style={styles.switchModeText}>Already have an account? </Text>
+                  <TouchableOpacity onPress={() => toggleMode('login')}>
+                    <Text style={styles.switchModeLink}>Sign In</Text>
+                  </TouchableOpacity>
+                </>
               )}
 
-              {error && <Text style={styles.errorText}>{error}</Text>}
-
-              <TouchableOpacity
-                style={styles.submitButton}
-                onPress={handleSubmit}
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <ActivityIndicator color="white" />
-                ) : (
-                  <Text style={styles.submitButtonText}>
-                    {mode === 'login' ? 'Sign In' : mode === 'signup' ? 'Sign Up' : 'Reset Password'}
-                  </Text>
-                )}
-              </TouchableOpacity>
-
-              <View style={styles.switchModeContainer}>
-                {mode === 'login' && (
-                  <>
-                    <Text style={styles.switchModeText}>Don't have an account? </Text>
-                    <TouchableOpacity onPress={() => toggleMode('signup')}>
-                      <Text style={styles.switchModeLink}>Sign Up</Text>
-                    </TouchableOpacity>
-                  </>
-                )}
-
-                {mode === 'signup' && (
-                  <>
-                    <Text style={styles.switchModeText}>Already have an account? </Text>
-                    <TouchableOpacity onPress={() => toggleMode('login')}>
-                      <Text style={styles.switchModeLink}>Sign In</Text>
-                    </TouchableOpacity>
-                  </>
-                )}
-
-                {mode === 'reset' && (
-                  <TouchableOpacity onPress={() => toggleMode('login')}>
-                    <Text style={styles.switchModeLink}>Back to Sign In</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-
-              {mode === 'login' && (
-                <TouchableOpacity
-                  style={styles.forgotPasswordButton}
-                  onPress={() => toggleMode('reset')}
-                >
-                  <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+              {mode === 'reset' && (
+                <TouchableOpacity onPress={() => toggleMode('login')}>
+                  <Text style={styles.switchModeLink}>Back to Sign In</Text>
                 </TouchableOpacity>
               )}
             </View>
+
+            {mode === 'login' && (
+              <TouchableOpacity
+                style={styles.forgotPasswordButton}
+                onPress={() => toggleMode('reset')}
+              >
+                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -295,15 +322,30 @@ const styles = StyleSheet.create({
     marginTop: 40,
     marginBottom: 40,
   },
+  logo: {
+    width: 40,
+    height: 40,
+    marginRight: 10,
+    borderRadius: 10,
+  },
   logoText: {
     fontSize: 32,
     fontWeight: 'bold',
     color: '#4338ca',
     marginBottom: 8,
   },
-  logoSubtext: {
+  welcomeText: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#1f2937',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  subtitleText: {
     fontSize: 16,
     color: '#6b7280',
+    textAlign: 'center',
+    marginBottom: 30,
   },
   formContainer: {
     backgroundColor: 'white',
@@ -314,22 +356,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 20,
     elevation: 5,
-  },
-  header: {
-    marginBottom: 24,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1f2937',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#6b7280',
-  },
-  form: {
-    
   },
   inputContainer: {
     marginBottom: 16,
@@ -386,6 +412,9 @@ const styles = StyleSheet.create({
     color: '#6366f1',
     fontSize: 14,
     fontWeight: '500',
+  },
+  eyeIcon: {
+    padding: 8,
   },
 });
 

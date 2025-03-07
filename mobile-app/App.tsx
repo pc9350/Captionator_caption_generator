@@ -11,12 +11,18 @@ import { auth } from './firebase/config';
 import HomeScreen from './screens/HomeScreen';
 import AuthScreen from './screens/AuthScreen';
 import DashboardScreen from './screens/DashboardScreen';
+import FeaturesScreen from './screens/FeaturesScreen';
+import SavedCaptionsScreen from './screens/SavedCaptionsScreen';
+import ProfileScreen from './screens/ProfileScreen';
 
 // Define the stack navigator types
 type RootStackParamList = {
   Home: undefined;
   Auth: undefined;
   Dashboard: undefined;
+  Features: undefined;
+  SavedCaptions: undefined;
+  Profile: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -31,6 +37,7 @@ const AuthStack = () => (
   >
     <Stack.Screen name="Home" component={HomeScreen} />
     <Stack.Screen name="Auth" component={AuthScreen} />
+    <Stack.Screen name="Features" component={FeaturesScreen} />
   </Stack.Navigator>
 );
 
@@ -42,6 +49,10 @@ const AppStack = () => (
     }}
   >
     <Stack.Screen name="Dashboard" component={DashboardScreen} />
+    <Stack.Screen name="SavedCaptions" component={SavedCaptionsScreen} />
+    <Stack.Screen name="Profile" component={ProfileScreen} />
+    <Stack.Screen name="Home" component={HomeScreen} />
+    <Stack.Screen name="Features" component={FeaturesScreen} />
   </Stack.Navigator>
 );
 

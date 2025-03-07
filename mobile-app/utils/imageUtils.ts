@@ -1,11 +1,13 @@
 import * as FileSystem from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { Platform } from 'react-native';
 
 // Maximum dimensions for images to be sent to OpenAI API
-const MAX_WIDTH = 800;
-const MAX_HEIGHT = 800;
-const IMAGE_QUALITY = 0.7;
+// Reduced dimensions to save tokens
+const MAX_WIDTH = 512;  // Reduced from 800
+const MAX_HEIGHT = 512; // Reduced from 800
+const IMAGE_QUALITY = 0.6; // Reduced from 0.7
 
 // Request permissions for accessing the camera roll
 export const requestMediaLibraryPermissions = async (): Promise<boolean> => {
@@ -20,7 +22,7 @@ export const requestCameraPermissions = async (): Promise<boolean> => {
 };
 
 // Pick an image from the media library
-export const pickImage = async (): Promise<string | null> => {
+export const pickImage = async (): Promise<{ uri: string; base64: string; isVideo: boolean } | null> => {
   try {
     const permissionGranted = await requestMediaLibraryPermissions();
     if (!permissionGranted) {
@@ -29,7 +31,7 @@ export const pickImage = async (): Promise<string | null> => {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: 'images',
+      mediaTypes: ImagePicker.MediaTypeOptions.All, // Allow both images and videos
       allowsEditing: true,
       aspect: [4, 3],
       quality: IMAGE_QUALITY,
@@ -39,8 +41,21 @@ export const pickImage = async (): Promise<string | null> => {
       return null;
     }
 
-    const uri = result.assets[0].uri;
-    return await processImage(uri);
+    const asset = result.assets[0];
+    const uri = asset.uri;
+    const isVideo = uri.endsWith('.mp4') || uri.endsWith('.mov') || uri.includes('video');
+    
+    // Process the media
+    if (isVideo) {
+      // For videos, we'll use a thumbnail or first frame
+      // This is a simplified approach - in a real app, you'd generate a proper thumbnail
+      const base64 = await processImage(uri);
+      return { uri, base64, isVideo: true };
+    } else {
+      // For images, process normally
+      const base64 = await processImage(uri);
+      return { uri, base64, isVideo: false };
+    }
   } catch (error) {
     console.error('Error picking image:', error);
     return null;
@@ -48,7 +63,7 @@ export const pickImage = async (): Promise<string | null> => {
 };
 
 // Take a photo with the camera
-export const takePhoto = async (): Promise<string | null> => {
+export const takePhoto = async (): Promise<{ uri: string; base64: string; isVideo: boolean } | null> => {
   try {
     const permissionGranted = await requestCameraPermissions();
     if (!permissionGranted) {
@@ -57,7 +72,7 @@ export const takePhoto = async (): Promise<string | null> => {
     }
 
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: 'images',
+      mediaTypes: ImagePicker.MediaTypeOptions.All, // Allow both photos and videos
       allowsEditing: true,
       aspect: [4, 3],
       quality: IMAGE_QUALITY,
@@ -67,8 +82,21 @@ export const takePhoto = async (): Promise<string | null> => {
       return null;
     }
 
-    const uri = result.assets[0].uri;
-    return await processImage(uri);
+    const asset = result.assets[0];
+    const uri = asset.uri;
+    const isVideo = uri.endsWith('.mp4') || uri.endsWith('.mov') || uri.includes('video');
+    
+    // Process the media
+    if (isVideo) {
+      // For videos, we'll use a thumbnail or first frame
+      // This is a simplified approach - in a real app, you'd generate a proper thumbnail
+      const base64 = await processImage(uri);
+      return { uri, base64, isVideo: true };
+    } else {
+      // For images, process normally
+      const base64 = await processImage(uri);
+      return { uri, base64, isVideo: false };
+    }
   } catch (error) {
     console.error('Error taking photo:', error);
     return null;
@@ -78,10 +106,21 @@ export const takePhoto = async (): Promise<string | null> => {
 // Process an image to ensure it meets the requirements for the OpenAI API
 export const processImage = async (uri: string): Promise<string> => {
   try {
-    // Convert the image to base64
-    const base64 = await FileSystem.readAsStringAsync(uri, {
+    // First, resize the image to reduce token usage
+    const resizedImage = await ImageManipulator.manipulateAsync(
+      uri,
+      [{ resize: { width: MAX_WIDTH, height: MAX_HEIGHT } }],
+      { compress: IMAGE_QUALITY, format: ImageManipulator.SaveFormat.JPEG }
+    );
+
+    // Convert the resized image to base64
+    const base64 = await FileSystem.readAsStringAsync(resizedImage.uri, {
       encoding: FileSystem.EncodingType.Base64,
     });
+
+    // Calculate approximate token size (very rough estimate)
+    const tokenSize = Math.ceil(base64.length / 4) * 0.75;
+    console.log(`Estimated image token size: ~${Math.round(tokenSize / 1000)}K tokens`);
 
     // Return the base64 image with the appropriate prefix
     return `data:image/jpeg;base64,${base64}`;

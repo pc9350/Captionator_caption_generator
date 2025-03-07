@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,255 +9,341 @@ import {
   ActivityIndicator,
   Alert,
   SafeAreaView,
-  TextInput,
   Platform,
   Dimensions,
-  StatusBar,
+  FlatList,
 } from 'react-native';
-import * as ExpoClipboard from 'expo-clipboard';
 import { useAuth } from '../hooks/useAuth';
 import { pickImage, takePhoto } from '../utils/imageUtils';
 import { generateCaption } from '../utils/openai';
-
-interface Caption {
-  id: string;
-  text: string;
-  category: string;
-  hashtags: string[];
-  createdAt: Date;
-  viral_score: number;
-}
-
-const TONE_OPTIONS = [
-  { id: 'casual', label: 'Casual' },
-  { id: 'professional', label: 'Professional' },
-  { id: 'funny', label: 'Funny' },
-  { id: 'inspirational', label: 'Inspirational' },
-  { id: 'storytelling', label: 'Storytelling' },
-];
+import Header from '../components/Header';
+import FooterNavbar from '../components/FooterNavbar';
+import CaptionOptions from '../components/CaptionOptions';
+import CaptionCard from '../components/CaptionCard';
+import { Ionicons } from '@expo/vector-icons';
+import { useFirebaseIntegration } from '../hooks/useFirebaseIntegration';
+import { useCaptionStore } from '../store/captionStore';
+import {
+  Caption,
+  CaptionTone,
+  CaptionLength,
+  SpicyLevel,
+  CaptionStyle,
+  CreativeLanguageOptions,
+} from '../types/caption';
 
 const { width } = Dimensions.get('window');
 
 const DashboardScreen = () => {
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [selectedTone, setSelectedTone] = useState('casual');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [captions, setCaptions] = useState<Caption[]>([]);
-  const [includeHashtags, setIncludeHashtags] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
+  // Use the caption store for state management
+  const { 
+    uploadedMedia,
+    activeMediaIndex,
+    generatedCaptions,
+    selectedTone: tone,
+    includeHashtags,
+    includeEmojis,
+    captionLength,
+    spicyLevel,
+    captionStyle,
+    creativeLanguageOptions,
+    isGenerating,
+    addUploadedMedia,
+    removeUploadedMedia,
+    clearUploadedMedia,
+    setActiveMediaIndex,
+    setGeneratedCaptions,
+    setSelectedTone: setTone,
+    setIncludeHashtags,
+    setIncludeEmojis,
+    setCaptionLength,
+    setSpicyLevel,
+    setCaptionStyle,
+    setCreativeLanguageOptions,
+    setIsGenerating,
+  } = useCaptionStore();
+  
+  // Use Firebase integration for saving captions
+  const { saveCaption: saveCaptionToFirebase } = useFirebaseIntegration();
   const { user, logout } = useAuth();
 
+  // Load saved captions on mount
+  useEffect(() => {
+    // This effect will run when the component mounts
+    console.log('DashboardScreen mounted');
+    return () => {
+      // This cleanup function will run when the component unmounts
+      console.log('DashboardScreen unmounted');
+    };
+  }, []);
+
   const handleImagePick = async () => {
-    const imageUri = await pickImage();
-    if (imageUri) {
-      setSelectedImage(imageUri);
-      // Clear previous captions when a new image is selected
-      setCaptions([]);
+    try {
+      setError(null);
+      const media = await pickImage();
+      if (media) {
+        addUploadedMedia(media);
+        setActiveMediaIndex(uploadedMedia.length); // Set to the newly added image
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      setError('Failed to pick image. Please try again.');
     }
   };
 
   const handleTakePhoto = async () => {
-    const imageUri = await takePhoto();
-    if (imageUri) {
-      setSelectedImage(imageUri);
-      // Clear previous captions when a new image is selected
-      setCaptions([]);
+    try {
+      setError(null);
+      const media = await takePhoto();
+      if (media) {
+        addUploadedMedia(media);
+        setActiveMediaIndex(uploadedMedia.length); // Set to the newly added image
+      }
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      setError('Failed to take photo. Please try again.');
     }
   };
 
+  const handleRemoveMedia = (index: number) => {
+    removeUploadedMedia(index);
+  };
+
   const handleGenerateCaption = async () => {
-    if (!selectedImage) {
-      Alert.alert('Error', 'Please select an image first');
+    if (uploadedMedia.length === 0) {
+      setError('Please upload at least one image or video');
       return;
     }
-
+    
     setIsGenerating(true);
-
+    setError(null);
+    
     try {
-      // Create a prompt for the image
-      const prompt = `Generate a creative caption for this image. The tone should be ${selectedTone}.`;
+      const currentMedia = uploadedMedia[activeMediaIndex];
+      const generatedCaptions = await generateCaption(
+        currentMedia.base64,
+        tone,
+        includeHashtags,
+        includeEmojis,
+        captionLength,
+        spicyLevel,
+        captionStyle,
+        creativeLanguageOptions
+      );
       
-      const caption = await generateCaption(prompt, selectedTone);
-      
-      if (caption) {
-        setCaptions([caption, ...captions]);
+      if (generatedCaptions.length === 0) {
+        setError('No captions were generated. Please try again.');
+      } else if (generatedCaptions.length === 1 && generatedCaptions[0].category === 'Error') {
+        setError(generatedCaptions[0].text);
+      } else {
+        setGeneratedCaptions(generatedCaptions);
       }
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to generate caption');
+      console.error('Error generating caption:', error);
+      
+      if (error.message && error.message.includes('maximum context length')) {
+        setError('Image is too complex. Please try a different image or reduce image quality.');
+      } else {
+        setError('Failed to generate caption. Please try again.');
+      }
     } finally {
       setIsGenerating(false);
     }
   };
 
-  const handleCopyCaption = async (caption: Caption) => {
-    let textToCopy = caption.text;
-    
-    if (includeHashtags && caption.hashtags.length > 0) {
-      textToCopy += '\n\n' + caption.hashtags.map(tag => `#${tag}`).join(' ');
+  const handleSaveCaption = async (caption: Caption) => {
+    if (!user) {
+      Alert.alert('Sign In Required', 'Please sign in to save captions.');
+      return;
     }
     
-    await ExpoClipboard.setStringAsync(textToCopy);
-    Alert.alert('Success', 'Caption copied to clipboard');
+    try {
+      const success = await saveCaptionToFirebase(caption);
+      if (success) {
+        Alert.alert('Success', 'Caption saved successfully!');
+      } else {
+        Alert.alert('Error', 'Failed to save caption. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error saving caption:', error);
+      Alert.alert('Error', 'Failed to save caption. Please try again.');
+    }
   };
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-    } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to log out');
-    }
-  };
+  const renderMediaItem = ({ item, index }: { item: any; index: number }) => (
+    <TouchableOpacity 
+      style={[
+        styles.mediaThumbnail, 
+        activeMediaIndex === index && styles.mediaThumbnailActive
+      ]}
+      onPress={() => setActiveMediaIndex(index)}
+    >
+      <Image 
+        source={{ uri: item.uri }} 
+        style={styles.thumbnailImage} 
+        resizeMode="cover"
+      />
+      {item.isVideo && (
+        <View style={styles.videoIndicator}>
+          <Ionicons name="play" size={12} color="white" />
+        </View>
+      )}
+      <TouchableOpacity 
+        style={styles.removeButton}
+        onPress={() => handleRemoveMedia(index)}
+      >
+        <Ionicons name="close" size={12} color="white" />
+      </TouchableOpacity>
+    </TouchableOpacity>
+  );
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
-      
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Captionator</Text>
-          <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-            <Text style={styles.logoutText}>Logout</Text>
+      <Header 
+        title="Generate Captions" 
+        showBackButton={false}
+        rightComponent={
+          <TouchableOpacity onPress={logout} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Ionicons name="log-out-outline" size={24} color="#4338ca" />
           </TouchableOpacity>
-        </View>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.content}>
-        {/* Welcome Section */}
+        }
+      />
+      
+      <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent}>
         <View style={styles.welcomeSection}>
-          <Text style={styles.welcomeText}>
-            Welcome, {user?.displayName || 'User'}!
-          </Text>
-          <Text style={styles.welcomeSubtext}>
-            Upload an image to generate AI-powered captions
-          </Text>
+          <Text style={styles.welcomeText}>Hello, {user?.displayName || 'User'}</Text>
+          <Text style={styles.welcomeSubtext}>Let's create some amazing captions</Text>
         </View>
-        
-        {/* Image Upload Section */}
+
+        {/* Media Upload Card */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Upload Media</Text>
           
-          <View style={styles.imageSection}>
-            {selectedImage ? (
-              <Image source={{ uri: selectedImage }} style={styles.selectedImage} />
-            ) : (
-              <View style={styles.imagePlaceholder}>
-                <Text style={styles.imagePlaceholderText}>No image selected</Text>
-              </View>
-            )}
-
-            <View style={styles.imageButtonsContainer}>
+          {uploadedMedia.length > 0 ? (
+            <View style={styles.mediaContainer}>
+              <Image 
+                source={{ uri: uploadedMedia[activeMediaIndex].uri }} 
+                style={styles.selectedImage}
+                resizeMode="cover"
+              />
+              {uploadedMedia[activeMediaIndex].isVideo && (
+                <View style={styles.videoOverlay}>
+                  <Ionicons name="play-circle" size={48} color="white" />
+                </View>
+              )}
+            </View>
+          ) : (
+            <View style={styles.imagePlaceholder}>
+              <Ionicons name="images-outline" size={48} color="#9ca3af" />
+              <Text style={styles.imagePlaceholderText}>No media selected</Text>
+            </View>
+          )}
+          
+          {/* Media Thumbnails */}
+          {uploadedMedia.length > 0 && (
+            <View style={styles.thumbnailsContainer}>
+              <FlatList
+                data={uploadedMedia}
+                renderItem={renderMediaItem}
+                keyExtractor={(_, index) => `media-${index}`}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.thumbnailsList}
+              />
               <TouchableOpacity 
-                style={styles.imageButton} 
+                style={styles.addMoreButton}
                 onPress={handleImagePick}
               >
-                <Text style={styles.imageButtonText}>Choose Image</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.imageButton} 
-                onPress={handleTakePhoto}
-              >
-                <Text style={styles.imageButtonText}>Take Photo</Text>
+                <Ionicons name="add" size={24} color="#4338ca" />
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
-
-        {/* Caption Options Section */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Caption Options</Text>
+          )}
           
-          <View style={styles.optionsSection}>
-            <Text style={styles.optionLabel}>Tone:</Text>
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false} 
-              contentContainerStyle={styles.toneScrollContent}
+          <View style={styles.imageButtonsContainer}>
+            <TouchableOpacity 
+              style={styles.imageButton}
+              onPress={handleImagePick}
             >
-              {TONE_OPTIONS.map((tone) => (
-                <TouchableOpacity
-                  key={tone.id}
-                  style={[
-                    styles.toneOption,
-                    selectedTone === tone.id && styles.toneOptionSelected,
-                  ]}
-                  onPress={() => setSelectedTone(tone.id)}
-                >
-                  <Text
-                    style={[
-                      styles.toneOptionText,
-                      selectedTone === tone.id && styles.toneOptionTextSelected,
-                    ]}
-                  >
-                    {tone.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-
-            <View style={styles.toggleOption}>
-              <Text style={styles.optionLabel}>Include Hashtags:</Text>
-              <TouchableOpacity
-                style={[
-                  styles.toggleButton,
-                  includeHashtags ? styles.toggleButtonActive : styles.toggleButtonInactive,
-                ]}
-                onPress={() => setIncludeHashtags(!includeHashtags)}
-              >
-                <View
-                  style={[
-                    styles.toggleCircle,
-                    includeHashtags ? styles.toggleCircleActive : styles.toggleCircleInactive,
-                  ]}
-                />
-              </TouchableOpacity>
-            </View>
-
-            <TouchableOpacity
-              style={[
-                styles.generateButton, 
-                (!selectedImage || isGenerating) && styles.generateButtonDisabled
-              ]}
-              onPress={handleGenerateCaption}
-              disabled={!selectedImage || isGenerating}
+              <Ionicons name="folder-outline" size={20} color="#4b5563" style={{ marginRight: 8 }} />
+              <Text style={styles.imageButtonText}>Choose Media</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.imageButton}
+              onPress={handleTakePhoto}
             >
-              {isGenerating ? (
-                <ActivityIndicator color="white" />
-              ) : (
-                <Text style={styles.generateButtonText}>Generate Caption</Text>
-              )}
+              <Ionicons name="camera-outline" size={20} color="#4b5563" style={{ marginRight: 8 }} />
+              <Text style={styles.imageButtonText}>Take Photo</Text>
             </TouchableOpacity>
           </View>
         </View>
+        
+        {/* Caption Options */}
+        <CaptionOptions
+          tone={tone}
+          setTone={setTone}
+          includeHashtags={includeHashtags}
+          setIncludeHashtags={setIncludeHashtags}
+          includeEmojis={includeEmojis}
+          setIncludeEmojis={setIncludeEmojis}
+          captionLength={captionLength}
+          setCaptionLength={setCaptionLength}
+          spicyLevel={spicyLevel}
+          setSpicyLevel={setSpicyLevel}
+          captionStyle={captionStyle}
+          setCaptionStyle={setCaptionStyle}
+          creativeLanguageOptions={creativeLanguageOptions}
+          setCreativeLanguageOptions={setCreativeLanguageOptions}
+        />
+
+        {/* Error Message */}
+        {error && (
+          <View style={styles.errorContainer}>
+            <Ionicons name="alert-circle-outline" size={24} color="#ef4444" />
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
+
+        {/* Generate Button */}
+        <TouchableOpacity
+          style={[
+            styles.generateButton, 
+            (uploadedMedia.length === 0 || isGenerating) && styles.generateButtonDisabled
+          ]}
+          onPress={handleGenerateCaption}
+          disabled={uploadedMedia.length === 0 || isGenerating}
+        >
+          {isGenerating ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <>
+              <Ionicons name="sparkles-outline" size={20} color="white" style={{ marginRight: 8 }} />
+              <Text style={styles.generateButtonText}>Generate Caption</Text>
+            </>
+          )}
+        </TouchableOpacity>
 
         {/* Generated Captions Section */}
-        {captions.length > 0 && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Generated Captions</Text>
+        {generatedCaptions.length > 0 && (
+          <View style={styles.captionsSection}>
+            <Text style={styles.captionsSectionTitle}>Generated Captions</Text>
             
-            {captions.map((caption) => (
-              <View key={caption.id} style={styles.captionCard}>
-                <Text style={styles.captionText}>{caption.text}</Text>
-                
-                {includeHashtags && caption.hashtags.length > 0 && (
-                  <Text style={styles.hashtagsText}>
-                    {caption.hashtags.map(tag => `#${tag}`).join(' ')}
-                  </Text>
-                )}
-                
-                <View style={styles.captionActions}>
-                  <TouchableOpacity
-                    style={styles.copyButton}
-                    onPress={() => handleCopyCaption(caption)}
-                  >
-                    <Text style={styles.copyButtonText}>Copy</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
+            {generatedCaptions.map((caption) => (
+              <CaptionCard
+                key={caption.id}
+                caption={caption}
+                includeHashtags={includeHashtags}
+                includeEmojis={includeEmojis}
+                onSave={handleSaveCaption}
+              />
             ))}
           </View>
         )}
       </ScrollView>
+      
+      <FooterNavbar />
     </SafeAreaView>
   );
 };
@@ -267,43 +353,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f9fa',
   },
-  header: {
-    backgroundColor: 'white',
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 15,
-    elevation: 2,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#4338ca',
-  },
-  logoutButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    backgroundColor: '#f3f4f6',
-  },
-  logoutText: {
-    color: '#4b5563',
-    fontWeight: '500',
-    fontSize: 14,
-  },
   content: {
+    flex: 1,
+  },
+  scrollContent: {
     padding: 16,
-    paddingBottom: 40,
+    paddingBottom: 90,
   },
   welcomeSection: {
     marginBottom: 20,
@@ -328,6 +383,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 15,
     elevation: 2,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
   },
   cardTitle: {
     fontSize: 18,
@@ -338,18 +395,30 @@ const styles = StyleSheet.create({
     borderBottomColor: '#f3f4f6',
     paddingBottom: 12,
   },
-  imageSection: {
+  mediaContainer: {
+    position: 'relative',
+    width: '100%',
     marginBottom: 16,
   },
   selectedImage: {
     width: '100%',
-    height: width * 0.7, // Aspect ratio based on screen width
+    height: width * 0.7,
     borderRadius: 12,
-    marginBottom: 16,
+  },
+  videoOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    borderRadius: 12,
   },
   imagePlaceholder: {
     width: '100%',
-    height: width * 0.7, // Aspect ratio based on screen width
+    height: width * 0.7,
     borderRadius: 12,
     backgroundColor: '#f3f4f6',
     justifyContent: 'center',
@@ -363,6 +432,65 @@ const styles = StyleSheet.create({
     color: '#9ca3af',
     fontSize: 16,
     fontWeight: '500',
+    marginTop: 12,
+  },
+  thumbnailsContainer: {
+    flexDirection: 'row',
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  thumbnailsList: {
+    paddingRight: 8,
+  },
+  mediaThumbnail: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    marginRight: 8,
+    position: 'relative',
+    borderWidth: 2,
+    borderColor: 'transparent',
+    overflow: 'hidden',
+  },
+  mediaThumbnailActive: {
+    borderColor: '#4338ca',
+  },
+  thumbnailImage: {
+    width: '100%',
+    height: '100%',
+  },
+  videoIndicator: {
+    position: 'absolute',
+    bottom: 4,
+    right: 4,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  removeButton: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: 'rgba(239, 68, 68, 0.8)',
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addMoreButton: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    backgroundColor: '#f3f4f6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#e5e7eb',
+    borderStyle: 'dashed',
   },
   imageButtonsContainer: {
     flexDirection: 'row',
@@ -377,83 +505,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#e5e7eb',
+    flexDirection: 'row',
+    justifyContent: 'center',
   },
   imageButtonText: {
     color: '#4b5563',
     fontWeight: '600',
     fontSize: 14,
   },
-  optionsSection: {
-    marginBottom: 16,
-  },
-  optionLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#4b5563',
-    marginBottom: 10,
-  },
-  toneScrollContent: {
-    paddingBottom: 16,
-  },
-  toneOption: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 30,
-    backgroundColor: '#f3f4f6',
-    marginRight: 10,
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  toneOptionSelected: {
-    backgroundColor: '#6366f1',
-    borderColor: '#6366f1',
-  },
-  toneOptionText: {
-    color: '#4b5563',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  toneOptionTextSelected: {
-    color: 'white',
-  },
-  toggleOption: {
+  errorContainer: {
+    backgroundColor: '#fee2e2',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#fecaca',
   },
-  toggleButton: {
-    width: 50,
-    height: 28,
-    borderRadius: 14,
-    padding: 2,
-  },
-  toggleButtonActive: {
-    backgroundColor: '#6366f1',
-  },
-  toggleButtonInactive: {
-    backgroundColor: '#e5e7eb',
-  },
-  toggleCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-  },
-  toggleCircleActive: {
-    backgroundColor: 'white',
-    alignSelf: 'flex-end',
-  },
-  toggleCircleInactive: {
-    backgroundColor: 'white',
-    alignSelf: 'flex-start',
+  errorText: {
+    color: '#b91c1c',
+    fontSize: 14,
+    marginLeft: 8,
+    flex: 1,
   },
   generateButton: {
     backgroundColor: '#6366f1',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
-    marginTop: 10,
+    marginBottom: 20,
+    flexDirection: 'row',
+    justifyContent: 'center',
   },
   generateButtonDisabled: {
     backgroundColor: '#a5b4fc',
@@ -463,39 +546,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  captionCard: {
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    backgroundColor: '#f9fafb',
+  captionsSection: {
+    marginBottom: 20,
   },
-  captionText: {
-    fontSize: 16,
+  captionsSectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
     color: '#1f2937',
-    marginBottom: 12,
-    lineHeight: 24,
-  },
-  hashtagsText: {
-    fontSize: 14,
-    color: '#6366f1',
     marginBottom: 16,
-  },
-  captionActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-  },
-  copyButton: {
-    backgroundColor: '#6366f1',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-  },
-  copyButtonText: {
-    color: 'white',
-    fontWeight: '600',
-    fontSize: 14,
+    paddingHorizontal: 4,
   },
 });
 
