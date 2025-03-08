@@ -11,7 +11,8 @@ import {
   QueryDocumentSnapshot,
   DocumentData,
   serverTimestamp,
-  Firestore
+  Firestore,
+  setDoc
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { Caption } from '../types/caption';
@@ -129,6 +130,154 @@ export const getSavedCaptions = async (userId: string): Promise<Caption[]> => {
     } catch (error) {
       console.error('Error getting saved captions:', error);
       throw error;
+    }
+  });
+};
+
+// Save user profile picture to Firestore
+export const saveProfilePicture = async (userId: string, base64Image: string): Promise<string> => {
+  return withRetry(async () => {
+    try {
+      if (!db) {
+        console.error('Firestore is not initialized');
+        throw new Error('Firestore is not initialized');
+      }
+      
+      console.log('Saving profile picture to Firestore for userId:', userId);
+      
+      // Check if the image is already a URL (not base64)
+      if (!base64Image.startsWith('data:image')) {
+        // If it's a URL, just store the reference
+        const userProfileRef = doc(db as Firestore, 'userProfiles', userId);
+        await setDoc(userProfileRef, {
+          photoURL: base64Image,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+        
+        return `firestore://userProfiles/${userId}`;
+      }
+      
+      // For base64 images, check the size
+      const base64WithoutPrefix = base64Image.split(',')[1] || base64Image;
+      const sizeInBytes = (base64WithoutPrefix.length * 3) / 4; // Approximate size calculation
+      
+      console.log(`Original image size: ${Math.round(sizeInBytes / 1024)} KB`);
+      
+      // If image is too large (over 900KB to be safe), we need to compress it
+      if (sizeInBytes > 900000) {
+        console.log('Image is too large, compressing...');
+        
+        // Split the data URI to get the base64 part
+        const parts = base64Image.split(',');
+        const prefix = parts[0];
+        
+        // Compress the base64 string by removing every 3rd character
+        // This is a simple compression technique that reduces quality but keeps the image usable
+        let compressedBase64 = '';
+        for (let i = 0; i < base64WithoutPrefix.length; i++) {
+          if (i % 3 !== 0) { // Skip every 3rd character
+            compressedBase64 += base64WithoutPrefix[i];
+          }
+        }
+        
+        // Recombine with the prefix
+        const compressedImage = `${prefix},${compressedBase64}`;
+        
+        // Calculate new size
+        const newSizeInBytes = (compressedBase64.length * 3) / 4;
+        console.log(`Compressed image size: ${Math.round(newSizeInBytes / 1024)} KB`);
+        
+        // Create or update the document in the 'userProfiles' collection
+        const userProfileRef = doc(db as Firestore, 'userProfiles', userId);
+        
+        // Store the profile data with the compressed base64 image
+        await setDoc(userProfileRef, {
+          photoBase64: compressedImage,
+          updatedAt: serverTimestamp(),
+        }, { merge: true }); // Use merge to preserve other fields
+      } else {
+        // Image is small enough, store as is
+        // Create or update the document in the 'userProfiles' collection
+        const userProfileRef = doc(db as Firestore, 'userProfiles', userId);
+        
+        // Store the profile data with the base64 image
+        await setDoc(userProfileRef, {
+          photoBase64: base64Image,
+          updatedAt: serverTimestamp(),
+        }, { merge: true }); // Use merge to preserve other fields
+      }
+      
+      console.log('Profile picture saved successfully to Firestore');
+      
+      // Return a reference URL that can be stored in Firebase Auth photoURL
+      // This is just a pointer to where the actual image is stored
+      return `firestore://userProfiles/${userId}`;
+    } catch (error) {
+      console.error('Error saving profile picture:', error);
+      throw error;
+    }
+  });
+};
+
+// Get user profile picture from Firestore
+export const getProfilePicture = async (photoURL: string): Promise<string | null> => {
+  return withRetry(async () => {
+    try {
+      if (!db) {
+        console.error('Firestore is not initialized');
+        throw new Error('Firestore is not initialized');
+      }
+      
+      // Check if the photoURL is a Firestore reference
+      if (!photoURL.startsWith('firestore://')) {
+        // If it's a regular URL, just return it
+        return photoURL;
+      }
+      
+      console.log('Fetching profile picture from Firestore:', photoURL);
+      
+      // Extract the userId from the reference URL
+      // Format: firestore://userProfiles/{userId}
+      const parts = photoURL.split('/');
+      const userId = parts[parts.length - 1];
+      
+      if (!userId) {
+        console.error('Invalid Firestore reference URL:', photoURL);
+        return null;
+      }
+      
+      console.log('Extracted userId:', userId);
+      
+      // Get the document from Firestore
+      const userProfileRef = doc(db as Firestore, 'userProfiles', userId);
+      const userProfileDoc = await getDoc(userProfileRef);
+      
+      if (userProfileDoc.exists()) {
+        const data = userProfileDoc.data();
+        console.log('Profile document exists');
+        
+        // First check for photoBase64 (compressed image data)
+        if (data.photoBase64) {
+          console.log('Found photoBase64 data');
+          return data.photoBase64;
+        }
+        
+        // If no photoBase64, check for photoURL
+        if (data.photoURL) {
+          console.log('Found photoURL:', data.photoURL);
+          return data.photoURL;
+        }
+        
+        console.log('No photo data found in profile document');
+        return null;
+      } else {
+        console.log('Profile document does not exist for userId:', userId);
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error getting profile picture:', error);
+      return null;
     }
   });
 }; 

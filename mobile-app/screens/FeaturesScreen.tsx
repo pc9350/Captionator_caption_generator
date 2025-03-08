@@ -68,7 +68,7 @@ const FeaturesScreen = () => {
   const navigateToAuth = () => {
     navigation.dispatch(
       CommonActions.navigate({
-        name: 'Auth'
+        name: 'AuthScreen'
       })
     );
   };
@@ -84,6 +84,8 @@ const FeaturesScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
+      
       <Header 
         title="Features" 
         customBackAction={handleBackNavigation}

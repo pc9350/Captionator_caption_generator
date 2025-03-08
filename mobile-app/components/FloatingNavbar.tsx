@@ -44,7 +44,7 @@ const getNavItems = (isAuthenticated: boolean): NavItem[] => {
       activeIcon: 'add-circle',
       route: 'Dashboard',
       authRequired: true,
-      unauthRoute: 'Auth',
+      unauthRoute: 'AuthScreen',
     },
   ];
   
@@ -75,7 +75,7 @@ const getNavItems = (isAuthenticated: boolean): NavItem[] => {
       activeIcon: 'person',
       route: 'Profile',
       authRequired: true,
-      unauthRoute: 'Auth',
+      unauthRoute: 'AuthScreen',
     }
   );
   
@@ -138,7 +138,7 @@ const FloatingNavbar = () => {
     if (item.authRequired && !user) {
       navigation.dispatch(
         CommonActions.navigate({
-          name: item.unauthRoute || 'Auth'
+          name: item.unauthRoute || 'AuthScreen'
         })
       );
       return;

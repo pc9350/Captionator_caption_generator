@@ -10,12 +10,17 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  Platform,
+  StatusBar,
 } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
 import Header from '../components/Header';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
+import { auth } from '../firebase/config';
+import { saveProfilePicture, getProfilePicture } from '../utils/firebaseUtils';
 
 const EditProfileScreen = () => {
   const { user, updateUserProfile } = useAuth();
@@ -25,9 +30,38 @@ const EditProfileScreen = () => {
   const [photoURL, setPhotoURL] = useState(user?.photoURL || '');
   const [tempPhotoURI, setTempPhotoURI] = useState<string | null>(null);
   const [bio, setBio] = useState('');
+  const [base64Image, setBase64Image] = useState<string | null>(null);
+  const [isLoadingImage, setIsLoadingImage] = useState(false);
   
   // Use the temp photo URI for display if available, otherwise use the photoURL
   const displayPhotoURI = tempPhotoURI || photoURL;
+  
+  // Load profile picture from Firestore if it's a Firestore reference
+  useEffect(() => {
+    const loadProfileImage = async () => {
+      if (user?.photoURL && user.photoURL.startsWith('firestore://')) {
+        setIsLoadingImage(true);
+        try {
+          const imageData = await getProfilePicture(user.photoURL);
+          if (imageData) {
+            setTempPhotoURI(imageData);
+          }
+        } catch (error) {
+          console.error('Error loading profile image:', error);
+        } finally {
+          setIsLoadingImage(false);
+        }
+      }
+    };
+    
+    loadProfileImage();
+  }, [user?.photoURL]);
+  
+  // Generate a placeholder image URL based on the user's name
+  const getPlaceholderImageUrl = (name: string) => {
+    // Use UI Avatars service to generate a placeholder image
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=4338ca&color=fff&size=200`;
+  };
   
   const handleSaveProfile = async () => {
     if (!displayName.trim()) {
@@ -38,12 +72,37 @@ const EditProfileScreen = () => {
     setIsLoading(true);
     
     try {
-      // If we have a temp photo, we need to upload it to storage first
-      // For this example, we'll just use the local URI directly
-      // In a real app, you would upload the image to Firebase Storage first
-      const updatedPhotoURL = tempPhotoURI || photoURL;
+      let updatedPhotoURL = photoURL;
       
-      // Update the user profile in Firebase
+      // If we have a user ID
+      if (user?.uid) {
+        try {
+          // If we have a new image, upload it to Firestore
+          if (base64Image) {
+            // Save the image to Firestore and get back a reference URL
+            updatedPhotoURL = await saveProfilePicture(user.uid, base64Image);
+            console.log('New profile picture saved to Firestore:', updatedPhotoURL);
+          } 
+          // If we don't have a new image but have an existing photo that's not a Firestore reference
+          else if (tempPhotoURI && (!photoURL || !photoURL.startsWith('firestore://'))) {
+            // Save the existing image to Firestore
+            updatedPhotoURL = await saveProfilePicture(user.uid, tempPhotoURI);
+            console.log('Existing profile picture saved to Firestore:', updatedPhotoURL);
+          }
+          // If we don't have any image and the current URL is not a Firestore reference
+          else if (!photoURL || !photoURL.startsWith('firestore://')) {
+            // Generate a placeholder URL that will be consistent across devices
+            const placeholderUrl = getPlaceholderImageUrl(displayName);
+            updatedPhotoURL = await saveProfilePicture(user.uid, placeholderUrl);
+            console.log('Placeholder profile picture saved to Firestore:', updatedPhotoURL);
+          }
+        } catch (error) {
+          console.error('Error saving profile picture:', error);
+          Alert.alert('Warning', 'Could not update profile picture, but will continue updating other profile information.');
+        }
+      }
+      
+      // Update the user profile in Firebase Auth
       await updateUserProfile({
         displayName,
         photoURL: updatedPhotoURL,
@@ -60,28 +119,64 @@ const EditProfileScreen = () => {
   };
   
   const handlePickImage = async () => {
-    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    
-    if (!permissionResult.granted) {
-      Alert.alert('Permission Required', 'You need to grant permission to access your photos');
-      return;
-    }
-    
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-    
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      // Store the selected image URI temporarily
-      setTempPhotoURI(result.assets[0].uri);
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (!permissionResult.granted) {
+        Alert.alert('Permission Required', 'You need to grant permission to access your photos');
+        return;
+      }
+      
+      // Use MediaType instead of deprecated MediaTypeOptions
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: 'images',
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+      
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const selectedAsset = result.assets[0];
+        
+        // Compress and resize the image
+        try {
+          // Show loading state
+          setIsLoading(true);
+          
+          // Resize and compress the image
+          const manipResult = await ImageManipulator.manipulateAsync(
+            selectedAsset.uri,
+            [{ resize: { width: 400, height: 400 } }], // Resize to 400x400
+            { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+          );
+          
+          // Store the selected image URI temporarily (just for display)
+          setTempPhotoURI(manipResult.uri);
+          
+          // Store the base64 data for later upload
+          if (manipResult.base64) {
+            setBase64Image(`data:image/jpeg;base64,${manipResult.base64}`);
+            console.log(`Compressed image size: ${Math.round((manipResult.base64.length * 3) / 4 / 1024)} KB`);
+          } else {
+            Alert.alert('Error', 'Could not get image data. Please try another image.');
+          }
+        } catch (error) {
+          console.error('Error manipulating image:', error);
+          Alert.alert('Error', 'Failed to process image. Please try again with a different image.');
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image. Please try again.');
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
+      
       <Header 
         title="Edit Profile" 
         showBackButton={true}
@@ -90,11 +185,20 @@ const EditProfileScreen = () => {
       <ScrollView style={styles.content}>
         {/* Profile Image */}
         <View style={styles.profileImageSection}>
-          <View style={styles.profileImageContainer}>
-            {displayPhotoURI ? (
+          <TouchableOpacity 
+            style={styles.profileImageContainer}
+            onPress={handlePickImage}
+            activeOpacity={0.8}
+          >
+            {isLoadingImage ? (
+              <View style={styles.profileImagePlaceholder}>
+                <ActivityIndicator color="#fff" size="small" />
+              </View>
+            ) : displayPhotoURI ? (
               <Image 
                 source={{ uri: displayPhotoURI }} 
                 style={styles.profileImage} 
+                defaultSource={require('../assets/images/captionator-logo.png')}
               />
             ) : (
               <View style={styles.profileImagePlaceholder}>
@@ -104,13 +208,10 @@ const EditProfileScreen = () => {
               </View>
             )}
             
-            <TouchableOpacity 
-              style={styles.changePhotoButton}
-              onPress={handlePickImage}
-            >
-              <Ionicons name="camera" size={20} color="#ffffff" />
-            </TouchableOpacity>
-          </View>
+            <View style={styles.changePhotoButton}>
+              <Ionicons name="camera" size={20} color="#fff" />
+            </View>
+          </TouchableOpacity>
           
           <TouchableOpacity 
             style={styles.changePhotoTextButton}
@@ -118,57 +219,49 @@ const EditProfileScreen = () => {
           >
             <Text style={styles.changePhotoText}>Change Profile Photo</Text>
           </TouchableOpacity>
+          
+          <Text style={styles.photoNote}>
+            Your profile photo will be stored securely
+          </Text>
         </View>
         
         {/* Form Fields */}
         <View style={styles.formSection}>
-          <View style={styles.formField}>
-            <Text style={styles.fieldLabel}>Display Name</Text>
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Name</Text>
             <TextInput
-              style={styles.textInput}
+              style={styles.input}
               value={displayName}
               onChangeText={setDisplayName}
-              placeholder="Enter your display name"
-              placeholderTextColor="#9ca3af"
+              placeholder="Your name"
             />
           </View>
           
-          <View style={styles.formField}>
-            <Text style={styles.fieldLabel}>Bio</Text>
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Bio</Text>
             <TextInput
-              style={[styles.textInput, styles.textAreaInput]}
+              style={[styles.input, styles.bioInput]}
               value={bio}
               onChangeText={setBio}
               placeholder="Tell us about yourself"
-              placeholderTextColor="#9ca3af"
               multiline
               numberOfLines={4}
-              textAlignVertical="top"
             />
           </View>
-          
-          <View style={styles.formField}>
-            <Text style={styles.fieldLabel}>Email</Text>
-            <TextInput
-              style={[styles.textInput, styles.disabledInput]}
-              value={user?.email || ''}
-              editable={false}
-            />
-            <Text style={styles.fieldNote}>Email cannot be changed</Text>
-          </View>
-          
-          <TouchableOpacity
-            style={styles.saveProfileButton}
-            onPress={handleSaveProfile}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator size="small" color="#ffffff" />
-            ) : (
-              <Text style={styles.saveProfileButtonText}>Save Profile</Text>
-            )}
-          </TouchableOpacity>
         </View>
+        
+        {/* Save Button */}
+        <TouchableOpacity 
+          style={styles.saveButton}
+          onPress={handleSaveProfile}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <ActivityIndicator color="#fff" size="small" />
+          ) : (
+            <Text style={styles.saveButtonText}>Save Profile</Text>
+          )}
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -185,22 +278,28 @@ const styles = StyleSheet.create({
   },
   profileImageSection: {
     alignItems: 'center',
-    marginVertical: 24,
+    marginBottom: 24,
   },
   profileImageContainer: {
-    position: 'relative',
-    marginBottom: 12,
-  },
-  profileImage: {
     width: 120,
     height: 120,
+    borderRadius: 60,
+    backgroundColor: '#f0f0f0',
+    overflow: 'visible',
+    position: 'relative',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  profileImage: {
+    width: '100%',
+    height: '100%',
     borderRadius: 60,
   },
   profileImagePlaceholder: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: '100%',
+    height: '100%',
     backgroundColor: '#6366f1',
+    borderRadius: 60,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -219,68 +318,61 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 3,
+    borderWidth: 2,
     borderColor: 'white',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    zIndex: 10,
   },
   changePhotoTextButton: {
-    marginTop: 8,
+    marginTop: 12,
   },
   changePhotoText: {
     color: '#4338ca',
     fontSize: 16,
     fontWeight: '600',
   },
+  photoNote: {
+    marginTop: 8,
+    fontSize: 12,
+    color: '#6b7280',
+    textAlign: 'center',
+  },
   formSection: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 15,
-    elevation: 2,
+    marginBottom: 24,
   },
-  formField: {
+  inputContainer: {
     marginBottom: 16,
   },
-  fieldLabel: {
-    fontSize: 16,
+  inputLabel: {
+    fontSize: 14,
     fontWeight: '600',
     color: '#4b5563',
     marginBottom: 8,
   },
-  textInput: {
-    backgroundColor: '#f9fafb',
+  input: {
+    backgroundColor: 'white',
     borderWidth: 1,
     borderColor: '#e5e7eb',
     borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    padding: 12,
     fontSize: 16,
-    color: '#1f2937',
   },
-  textAreaInput: {
-    minHeight: 100,
-    paddingTop: 12,
+  bioInput: {
+    height: 100,
+    textAlignVertical: 'top',
   },
-  disabledInput: {
-    backgroundColor: '#f3f4f6',
-    color: '#9ca3af',
-  },
-  fieldNote: {
-    fontSize: 12,
-    color: '#9ca3af',
-    marginTop: 4,
-  },
-  saveProfileButton: {
+  saveButton: {
     backgroundColor: '#4338ca',
     borderRadius: 8,
     paddingVertical: 14,
     alignItems: 'center',
-    marginTop: 16,
+    justifyContent: 'center',
   },
-  saveProfileButtonText: {
+  saveButtonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: '600',

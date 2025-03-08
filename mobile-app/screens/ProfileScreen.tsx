@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,9 @@ import {
   Image,
   Alert,
   Switch,
+  Platform,
+  StatusBar,
+  ActivityIndicator,
 } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
 import Header from '../components/Header';
@@ -16,11 +19,85 @@ import FooterNavbar from '../components/FooterNavbar';
 import { Ionicons } from '@expo/vector-icons';
 import FloatingNavbar from '../components/FloatingNavbar';
 import { useNavigation, CommonActions } from '@react-navigation/native';
+import { getProfilePicture } from '../utils/firebaseUtils';
 
 const ProfileScreen = () => {
   const { user, logout } = useAuth();
   const [notifications, setNotifications] = React.useState(true);
   const navigation = useNavigation();
+  const [imageError, setImageError] = useState(false);
+  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
+  const [isLoadingImage, setIsLoadingImage] = useState(false);
+
+  // Handle profile image URL
+  useEffect(() => {
+    const loadProfileImage = async () => {
+      if (user?.photoURL) {
+        console.log("User photo URL:", user.photoURL);
+        setIsLoadingImage(true);
+        
+        try {
+          // Check if the URL is a Firestore reference
+          if (user.photoURL && user.photoURL.startsWith('firestore://')) {
+            // Fetch the actual image data from Firestore
+            const imageData = await getProfilePicture(user.photoURL);
+            if (imageData) {
+              setProfileImageUrl(imageData);
+              setImageError(false);
+            } else {
+              // If we couldn't get the image data, retry after a short delay
+              // This helps with synchronization issues across devices
+              setTimeout(async () => {
+                try {
+                  if (user.photoURL) {
+                    const retryImageData = await getProfilePicture(user.photoURL);
+                    if (retryImageData) {
+                      setProfileImageUrl(retryImageData);
+                      setImageError(false);
+                    } else {
+                      setImageError(true);
+                    }
+                  }
+                } catch (retryError) {
+                  console.error('Error in retry loading profile image:', retryError);
+                  setImageError(true);
+                }
+              }, 2000); // Retry after 2 seconds
+            }
+          }
+          // Check if the URL is a base64 data URI
+          else if (user.photoURL.startsWith('data:image')) {
+            // For base64 images, use directly
+            setProfileImageUrl(user.photoURL);
+            setImageError(false);
+          }
+          // Check if the URL is a local file URI
+          else if (user.photoURL.startsWith('file://')) {
+            // For local files, we'll just try to use it directly
+            setProfileImageUrl(user.photoURL);
+            setImageError(false);
+          } else {
+            // For remote URLs, add a timestamp to prevent caching
+            const timestamp = new Date().getTime();
+            const urlWithTimestamp = user.photoURL.includes('?') 
+              ? `${user.photoURL}&t=${timestamp}` 
+              : `${user.photoURL}?t=${timestamp}`;
+            setProfileImageUrl(urlWithTimestamp);
+            setImageError(false);
+          }
+        } catch (error) {
+          console.error('Error loading profile image:', error);
+          setImageError(true);
+        } finally {
+          setIsLoadingImage(false);
+        }
+      } else {
+        setProfileImageUrl(null);
+      }
+    };
+    
+    loadProfileImage();
+  }, [user?.photoURL]);
 
   const handleLogout = async () => {
     Alert.alert(
@@ -85,16 +162,31 @@ const ProfileScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
+      
       <Header title="Profile" />
       
       <ScrollView style={styles.content}>
         {/* Profile Header */}
         <View style={styles.profileHeader}>
-          <View style={styles.profileImageContainer}>
-            {user?.photoURL ? (
+          <TouchableOpacity 
+            style={styles.profileImageContainer}
+            onPress={handleEditProfile}
+            activeOpacity={0.8}
+          >
+            {isLoadingImage ? (
+              <View style={styles.profileImagePlaceholder}>
+                <ActivityIndicator size="small" color="#fff" />
+              </View>
+            ) : profileImageUrl && !imageError ? (
               <Image 
-                source={{ uri: user.photoURL }} 
-                style={styles.profileImage} 
+                source={{ uri: profileImageUrl }} 
+                style={styles.profileImage}
+                defaultSource={require('../assets/images/captionator-logo.png')}
+                onError={(e) => {
+                  console.log("Image error:", e.nativeEvent.error);
+                  setImageError(true);
+                }}
               />
             ) : (
               <View style={styles.profileImagePlaceholder}>
@@ -103,7 +195,7 @@ const ProfileScreen = () => {
                 </Text>
               </View>
             )}
-          </View>
+          </TouchableOpacity>
           
           <Text style={styles.profileName}>
             {user?.displayName || 'User'}
@@ -216,11 +308,19 @@ const styles = StyleSheet.create({
   },
   profileImageContainer: {
     marginBottom: 16,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    overflow: 'hidden',
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   profileImage: {
     width: 100,
     height: 100,
     borderRadius: 50,
+    backgroundColor: '#f0f0f0',
   },
   profileImagePlaceholder: {
     width: 100,

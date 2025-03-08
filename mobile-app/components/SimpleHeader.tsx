@@ -1,42 +1,26 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform, StatusBar } from 'react-native';
-import { useNavigation, CommonActions } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
 // Fixed status bar height for Android
 const ANDROID_STATUSBAR_HEIGHT = 0; // Set to 0 to remove the extra padding
 
-interface HeaderProps {
+interface SimpleHeaderProps {
   title: string;
   showBackButton?: boolean;
   rightComponent?: React.ReactNode;
-  customBackAction?: () => void;
+  onBackPress?: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ 
+const SimpleHeader: React.FC<SimpleHeaderProps> = ({ 
   title, 
   showBackButton = true,
   rightComponent,
-  customBackAction
+  onBackPress
 }) => {
-  const navigation = useNavigation();
-
   const handleGoBack = () => {
-    if (customBackAction) {
-      customBackAction();
-      return;
-    }
-    
-    // Check if we can go back
-    if (navigation.canGoBack()) {
-      navigation.goBack();
-    } else {
-      // If we can't go back, navigate to Home as a fallback
-      navigation.dispatch(
-        CommonActions.navigate({
-          name: 'Home'
-        })
-      );
+    if (onBackPress) {
+      onBackPress();
     }
   };
 
@@ -53,7 +37,9 @@ const Header: React.FC<HeaderProps> = ({
           </TouchableOpacity>
         )}
         
-        <Text style={styles.title}>{title}</Text>
+        <Text style={styles.title} numberOfLines={1}>
+          {title}
+        </Text>
         
         <View style={styles.rightContainer}>
           {rightComponent}
@@ -65,45 +51,41 @@ const Header: React.FC<HeaderProps> = ({
 
 const styles = StyleSheet.create({
   container: {
+    width: '100%',
     backgroundColor: 'white',
-    paddingTop: Platform.OS === 'android' ? ANDROID_STATUSBAR_HEIGHT : 0,
+    paddingTop: Platform.OS === 'ios' ? 44 : ANDROID_STATUSBAR_HEIGHT,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: '#f0f0f0',
+    elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 15,
-    elevation: 2,
-    zIndex: 10, // Ensure header is above other elements
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
   },
   content: {
+    height: 56,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 16,
-    height: 64, // Increase height to ensure back button is fully visible
   },
   backButton: {
-    padding: 8, // Increase padding for larger touch area
-    marginLeft: -8, // Offset the padding to maintain alignment
-    width: 44, // Fixed width to ensure proper alignment
-    height: 44, // Fixed height to ensure proper alignment
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },
   title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#4338ca',
     flex: 1,
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
     textAlign: 'center',
   },
   rightContainer: {
-    width: 44, // Same width as back button for balance
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 40,
+    alignItems: 'flex-end',
   }
 });
 
-export default Header; 
+export default SimpleHeader; 

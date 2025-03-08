@@ -13,6 +13,7 @@ import {
   Dimensions,
   FlatList,
   Modal,
+  StatusBar,
 } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
 import { pickImage, takePhoto } from '../utils/imageUtils';
@@ -360,6 +361,8 @@ const DashboardScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
+      
       <Header 
         title="Generate Captions" 
         showBackButton={false}
