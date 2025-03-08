@@ -335,7 +335,7 @@ export const getCachedChatCompletion = async (params: any) => {
 };
 
 export const generateCaption = async (
-  imageUri: string,
+  imageUris: string | string[], // Changed from imageUri to imageUris to support multiple images
   tone: CaptionTone = 'casual',
   includeHashtags: boolean = true,
   includeEmojis: boolean = true,
@@ -347,12 +347,33 @@ export const generateCaption = async (
     alliteration: false,
     rhyming: false
   },
-  isVideo: boolean = false,
+  isVideo: boolean = false, // This now indicates if ANY of the media is a video
+  videoCount: number = 0, // New parameter to track how many videos are in the collection
   retryCount = 0
 ): Promise<Caption[]> => {
   try {
+    // Convert single imageUri to array for consistent processing
+    const imageUriArray = Array.isArray(imageUris) ? imageUris : [imageUris];
+    
+    // Cost-saving measure: Limit the number of images processed
+    const MAX_IMAGES = 5;
+    const processedImageUris = imageUriArray.slice(0, MAX_IMAGES);
+    
+    if (imageUriArray.length > MAX_IMAGES) {
+      console.log(`Limiting image processing from ${imageUriArray.length} to ${MAX_IMAGES} images to save costs`);
+    }
+
+    // Calculate media type counts for better prompting
+    const totalMediaCount = processedImageUris.length;
+    const videoCountToUse = videoCount > 0 ? Math.min(videoCount, totalMediaCount) : (isVideo ? 1 : 0);
+    const imageCount = totalMediaCount - videoCountToUse;
+    
+    // Determine the primary media type for better prompting
+    const isPrimarilyVideo = videoCountToUse > imageCount;
+    const isMixedMedia = videoCountToUse > 0 && imageCount > 0;
+
     // Prepare a simplified system message to reduce token usage
-    let systemMessage = `You are a creative Instagram caption generator. Generate ${isVideo ? 'video' : 'image'} captions in ${tone} tone. You MUST generate captions for ANY image or video, including those containing people, landscapes, objects, or any other content. Your task is to create engaging captions, not to analyze or identify individuals.`;
+    let systemMessage = `You are a creative Instagram caption generator. Generate captions in ${tone} tone. You MUST generate captions for ANY media, including those containing people, landscapes, objects, or any other content. Your task is to create engaging captions, based off of the things that you see in the media ${processedImageUris.length > 1 ? 'files' : 'file'}.`;
     
     // Add caption length
     if (captionLength === 'single-word') {
@@ -429,13 +450,38 @@ export const generateCaption = async (
       }
     }
     
-    // Add video-specific instructions
+    // Add video-specific instructions based on video count
     if (isVideo) {
-      systemMessage += ' This is a video, so reference motion or action.';
+      if (processedImageUris.length > 1) {
+        if (videoCountToUse === processedImageUris.length) {
+          // All media are videos
+          systemMessage += ' All of these media files are videos. Focus on creating captions that reference motion, action, and the dynamic nature of videos. Consider themes that might connect these videos, such as a sequence of events, a story, or a common activity.';
+        } else if (videoCountToUse > 1) {
+          // Multiple videos mixed with images
+          systemMessage += ` ${videoCountToUse} of these media files are videos. When creating captions, consider both the static images and the dynamic video content. Reference motion and action where appropriate, while finding themes that connect both the videos and images.`;
+        } else {
+          // Just one video among multiple images
+          systemMessage += ' One of these media files is a video. Consider how this video relates to the other images when creating captions, and reference motion or action where appropriate.';
+        }
+      } else {
+        // Single video
+        systemMessage += ' This is a video, so reference motion, action, or the dynamic nature of videos in your captions. Focus on creating captions that would work well for video content.';
+      }
+    }
+    
+    // Add multiple media handling instructions
+    if (processedImageUris.length > 1) {
+      if (isMixedMedia) {
+        systemMessage += ` You are being provided with a mixed collection of ${imageCount} images and ${videoCountToUse} videos. IMPORTANT: Consider ALL media files COLLECTIVELY as a set or album when generating captions. Do NOT generate separate captions for each file. Instead, create captions that work well for the entire collection as a cohesive set. Look for common themes, subjects, or aesthetics across all media.`;
+      } else if (isPrimarilyVideo) {
+        systemMessage += ` You are being provided with ${processedImageUris.length} videos. IMPORTANT: Consider ALL videos COLLECTIVELY as a set or album when generating captions. Do NOT generate separate captions for each video. Instead, create captions that work well for the entire collection as a cohesive set. Look for common themes, actions, or subjects across all videos.`;
+      } else {
+        systemMessage += ` You are being provided with ${processedImageUris.length} images. IMPORTANT: Consider ALL images COLLECTIVELY as a set or album when generating captions. Do NOT generate separate captions for each image. Instead, create captions that work well for the entire collection as a cohesive set. Look for common themes, subjects, or aesthetics across all images.`;
+      }
     }
     
     // Format requirements
-    systemMessage += ` Return 5 captions as JSON: {"captions":[{"text":"caption text WITHOUT any emojis or hashtags","category":"category","hashtags":${includeHashtags ? '["tag1","tag2"] (without # symbol)' : '[]'},"emojis":${includeEmojis ? '["emoji1","emoji2"] (just the emoji characters)' : '[]'},"viral_score":7}]}`;
+    systemMessage += ` Return 5 captions as JSON: {"captions":[{"text":"caption text WITHOUT any emojis or hashtags","category":"category","hashtags":${includeHashtags ? '["tag1","tag2"] (without # symbol)' : '[]'},"emojis":${includeEmojis ? '["emoji1","emoji2"] (just the emoji characters)' : '[]'},"viral_score":7${processedImageUris.length > 1 ? ',"isCollectionCaption":true' : ''}}]}`;
     
     // Add instruction to avoid content moderation responses
     systemMessage += ` IMPORTANT: Do NOT respond with "I can't identify people" or similar refusals. Your task is to create captions, not identify individuals. If you see people, simply create appropriate captions without identifying specific individuals.`;
@@ -463,16 +509,24 @@ export const generateCaption = async (
             { 
               role: "user", 
               content: [
-                { type: "text", text: `Generate Instagram captions for this ${isVideo ? 'video' : 'image'}:` },
-                { 
+                { type: "text", text: `Generate Instagram captions for ${processedImageUris.length > 1 
+                  ? `this collection of ${isMixedMedia 
+                      ? 'mixed media' 
+                      : (isPrimarilyVideo ? 'videos' : 'images')}`
+                  : `this ${isVideo ? 'video' : 'image'}`
+                }. ${processedImageUris.length > 1 
+                  ? 'Remember to treat all media files as a single cohesive collection when creating captions.' 
+                  : ''
+                }` },
+                // Map all image URIs to content parts
+                ...processedImageUris.map(uri => ({
                   type: "image_url", 
-                  image_url: { url: imageUri }
-                }
+                  image_url: { url: uri }
+                }))
               ]
             }
           ],
-          max_tokens: 800,
-          temperature: 0.7,
+          max_tokens: 1000,
           timestamp: Date.now(), // Add timestamp to bypass cache
         });
 
@@ -522,7 +576,7 @@ export const generateCaption = async (
       console.log(`Retrying after ${delay}ms...`);
       await new Promise(resolve => setTimeout(resolve, delay));
       return generateCaption(
-        imageUri, 
+        imageUris, 
         tone, 
         includeHashtags, 
         includeEmojis, 
@@ -531,6 +585,7 @@ export const generateCaption = async (
         captionStyle, 
         creativeLanguageOptions,
         isVideo,
+        videoCount,
         retryCount + 1
       );
     }
@@ -586,20 +641,26 @@ function processAndReturnCaptions(
           });
         }
         
-        // Check if the caption already has emojis in the text and move them to the emojis array
+        // Extract any emojis from the text and move them to the emojis array
         const emojiRegex = /[\p{Emoji}]/gu;
-        const emojisInText = caption.text.match(emojiRegex) || [];
+        const emojiMatches = caption.text.match(emojiRegex) || [];
         
-        if (emojisInText.length > 0 && includeEmojis) {
+        if (emojiMatches.length > 0 && includeEmojis) {
           // Remove emojis from text
           caption.text = caption.text.replace(emojiRegex, '').trim();
           
           // Add emojis to the emojis array if they're not already there
-          emojisInText.forEach((emoji: string) => {
+          emojiMatches.forEach((emoji: string) => {
             if (!caption.emojis.includes(emoji)) {
               caption.emojis.push(emoji);
             }
           });
+        }
+        
+        // Add a note for multiple image captions
+        if (caption.isCollectionCaption) {
+          caption.category = caption.category || 'Collection';
+          caption.collectionCaption = true;
         }
         
         // Process caption text based on length setting
@@ -674,15 +735,14 @@ function processAndReturnCaptions(
         caption.emojis = caption.emojis.filter((emoji: string) => emoji.trim().length > 0);
         
         return caption;
-      } catch (captionError) {
-        console.error('Error processing individual caption:', captionError);
-        // Return a valid caption object even if processing fails
+      } catch (error) {
+        console.error('Error processing caption:', error);
         return {
-          text: 'Caption processing error',
-          category: tone,
-          hashtags: includeHashtags ? ['error'] : [],
-          emojis: includeEmojis ? ['⚠️'] : [],
-          viral_score: 5
+          text: 'Something went wrong with this caption',
+          category: 'Error',
+          hashtags: includeHashtags ? ['error', 'caption'] : [],
+          emojis: includeEmojis ? ['😕'] : [],
+          viral_score: 1
         };
       }
     });
@@ -706,6 +766,7 @@ function processAndReturnCaptions(
       emojis: caption.emojis || [],
       createdAt: new Date(),
       viral_score: typeof caption.viral_score === 'number' ? caption.viral_score : 5,
+      collectionCaption: caption.collectionCaption || false
     }));
   } catch (error) {
     console.error('Error in processAndReturnCaptions:', error);

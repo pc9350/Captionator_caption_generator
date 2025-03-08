@@ -133,6 +133,7 @@ const DashboardScreen = () => {
     }
     
     try {
+      // Get the current active media for logging purposes
       const currentMedia = uploadedMedia[activeMediaIndex];
       
       // Check if the media is valid
@@ -143,8 +144,12 @@ const DashboardScreen = () => {
         return;
       }
       
-      console.log(`Generating caption for ${currentMedia.isVideo ? 'video' : 'image'}`);
-      console.log('Media URI:', currentMedia.uri);
+      // Count videos in the collection
+      const videoCount = uploadedMedia.filter(media => media.isVideo).length;
+      const hasVideos = videoCount > 0;
+      
+      console.log(`Generating caption for ${uploadedMedia.length} media items (${videoCount} videos, ${uploadedMedia.length - videoCount} images)`);
+      console.log('Active Media URI:', currentMedia.uri);
       console.log('Settings:', {
         tone,
         includeHashtags,
@@ -152,7 +157,9 @@ const DashboardScreen = () => {
         captionLength,
         spicyLevel,
         captionStyle,
-        creativeLanguageOptions
+        creativeLanguageOptions,
+        hasVideos,
+        videoCount
       });
       
       // Add a timeout to prevent hanging requests
@@ -160,9 +167,12 @@ const DashboardScreen = () => {
         setTimeout(() => reject(new Error('Caption generation timed out')), 45000); // 45 second timeout
       });
       
-      // Create the caption generation promise
+      // Extract all base64 data from uploaded media
+      const allMediaBase64 = uploadedMedia.map(media => media.base64);
+      
+      // Create the caption generation promise with all media
       const captionPromise = generateCaption(
-        currentMedia.base64,
+        allMediaBase64,
         tone,
         includeHashtags,
         includeEmojis,
@@ -170,7 +180,8 @@ const DashboardScreen = () => {
         spicyLevel,
         captionStyle,
         creativeLanguageOptions,
-        currentMedia.isVideo,
+        hasVideos, // Set isVideo to true if any media is a video
+        videoCount, // Pass the count of videos
         retryCount
       );
       
@@ -500,8 +511,32 @@ const DashboardScreen = () => {
           )}
         </TouchableOpacity>
 
+        {/* Loading Indicator */}
+        {isGenerating && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#4338ca" />
+            <Text style={styles.loadingText}>
+              {uploadedMedia.length > 1 
+                ? (() => {
+                    const videoCount = uploadedMedia.filter(media => media.isVideo).length;
+                    const imageCount = uploadedMedia.length - videoCount;
+                    
+                    if (videoCount === 0) {
+                      return `Generating captions for your collection of ${uploadedMedia.length} images...`;
+                    } else if (imageCount === 0) {
+                      return `Generating captions for your collection of ${uploadedMedia.length} videos...`;
+                    } else {
+                      return `Generating captions for your mixed collection (${videoCount} videos, ${imageCount} images)...`;
+                    }
+                  })()
+                : `Generating ${tone} captions for your ${uploadedMedia[activeMediaIndex]?.isVideo ? 'video' : 'image'}...`}
+            </Text>
+            <Text style={styles.loadingSubtext}>This may take up to 30 seconds</Text>
+          </View>
+        )}
+
         {/* Generated Captions Section */}
-        {generatedCaptions.length > 0 && (
+        {generatedCaptions.length > 0 && !isGenerating && (
           <View style={styles.captionsSection}>
             <Text style={styles.captionsSectionTitle}>Generated Captions</Text>
             
@@ -914,6 +949,32 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 14,
     marginLeft: 6,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f8f9fa',
+    padding: 16,
+    borderRadius: 8,
+    marginVertical: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  loadingText: {
+    color: '#1f2937',
+    fontSize: 16,
+    fontWeight: '600',
+    marginTop: 12,
+    textAlign: 'center',
+  },
+  loadingSubtext: {
+    color: '#6b7280',
+    fontSize: 12,
+    marginTop: 4,
+    textAlign: 'center',
   },
 });
 
