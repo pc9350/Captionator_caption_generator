@@ -142,6 +142,15 @@ const ProfileScreen = () => {
     );
   };
 
+  const handleTermsOfService = () => {
+    // Navigate to Terms of Service screen
+    navigation.dispatch(
+      CommonActions.navigate({
+        name: 'TermsOfService'
+      })
+    );
+  };
+
   const handleHelpSupport = () => {
     // Navigate to Help & Support screen
     navigation.dispatch(
@@ -248,6 +257,14 @@ const ProfileScreen = () => {
           >
             <Ionicons name="shield-checkmark-outline" size={24} color="#4b5563" />
             <Text style={styles.accountItemText}>Privacy Settings</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.accountItem}
+            onPress={handleTermsOfService}
+          >
+            <Ionicons name="document-text-outline" size={24} color="#4b5563" />
+            <Text style={styles.accountItemText}>Terms of Service</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 

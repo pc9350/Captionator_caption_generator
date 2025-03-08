@@ -33,9 +33,10 @@ const AuthScreen = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   const navigation = useNavigation();
-  const { login, signup, resetPassword, error, user } = useAuth();
+  const { login, signup, resetPassword, user } = useAuth();
 
   // Redirect to Dashboard if user is already authenticated
   useEffect(() => {
@@ -133,8 +134,25 @@ const AuthScreen = () => {
     }
   };
 
+  const handlePrivacyPolicy = () => {
+    navigation.dispatch(
+      CommonActions.navigate({
+        name: 'PrivacyPolicy' as never
+      })
+    );
+  };
+
+  const handleTermsOfService = () => {
+    navigation.dispatch(
+      CommonActions.navigate({
+        name: 'TermsOfService' as never
+      })
+    );
+  };
+
   const toggleMode = (newMode: AuthMode) => {
     setMode(newMode);
+    setError(null);
     // Clear fields when switching modes
     setPassword('');
     setConfirmPassword('');
@@ -298,6 +316,20 @@ const AuthScreen = () => {
                 <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
               </TouchableOpacity>
             )}
+            
+            {/* Legal Links */}
+            <View style={styles.legalLinksContainer}>
+              <Text style={styles.legalText}>
+                By using this app, you agree to our{' '}
+              </Text>
+              <TouchableOpacity onPress={handleTermsOfService}>
+                <Text style={styles.legalLink}>Terms of Service</Text>
+              </TouchableOpacity>
+              <Text style={styles.legalText}> and </Text>
+              <TouchableOpacity onPress={handlePrivacyPolicy}>
+                <Text style={styles.legalLink}>Privacy Policy</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -415,6 +447,24 @@ const styles = StyleSheet.create({
   },
   eyeIcon: {
     padding: 8,
+  },
+  legalLinksContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 24,
+    paddingHorizontal: 10,
+  },
+  legalText: {
+    color: '#6b7280',
+    fontSize: 12,
+    textAlign: 'center',
+  },
+  legalLink: {
+    color: '#6366f1',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });
 

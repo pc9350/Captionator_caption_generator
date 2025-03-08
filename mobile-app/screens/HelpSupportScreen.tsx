@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -18,38 +18,35 @@ import Header from '../components/Header';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import FloatingNavbar from '../components/FloatingNavbar';
-import emailjs from '@emailjs/browser';
-import { EMAILJS_CONFIG } from '../config/emailConfig';
 
-// Real email sending function using EmailJS
-const sendEmailDirectly = async (
+// Function to open email client with pre-filled content
+const openEmailClient = (
   name: string, 
   email: string, 
   subject: string, 
   message: string
 ): Promise<boolean> => {
   try {
-    // Prepare template parameters
-    const templateParams = {
-      from_name: name,
-      from_email: email,
-      subject: subject,
-      message: message,
-    };
+    console.log('Opening email client...');
+    
+    // Format the email body
+    const emailBody = `
+Name: ${name}
+Email: ${email}
 
-    // Send email using EmailJS
-    const response = await emailjs.send(
-      EMAILJS_CONFIG.SERVICE_ID,
-      EMAILJS_CONFIG.TEMPLATE_ID,
-      templateParams,
-      EMAILJS_CONFIG.PUBLIC_KEY
-    );
+${message}
 
-    console.log('Email sent successfully:', response);
-    return true;
+---
+Sent from Captionator App
+`;
+    
+    // Open the device's email client with pre-filled content
+    Linking.openURL(`mailto:chhabrapranav2001@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`);
+    
+    return Promise.resolve(true);
   } catch (error) {
-    console.error('Error sending email:', error);
-    return false;
+    console.error('Error opening email client:', error);
+    return Promise.resolve(false);
   }
 };
 
@@ -61,12 +58,6 @@ const HelpSupportScreen = () => {
   const [email, setEmail] = useState(user?.email || '');
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
-  
-  // Initialize EmailJS
-  useEffect(() => {
-    // Initialize EmailJS with your user ID
-    emailjs.init(EMAILJS_CONFIG.USER_ID);
-  }, []);
   
   const handleSubmit = async () => {
     // Validate form
@@ -85,13 +76,8 @@ const HelpSupportScreen = () => {
     setIsLoading(true);
     
     try {
-      // Send email using EmailJS
-      const success = await sendEmailDirectly(
-        name,
-        email,
-        subject,
-        message
-      );
+      // Open the device's email client
+      const success = await openEmailClient(name, email, subject, message);
       
       if (success) {
         // Reset form
@@ -99,38 +85,20 @@ const HelpSupportScreen = () => {
         setMessage('');
         
         Alert.alert(
-          'Message Sent',
-          'Thank you for contacting us. We will get back to you as soon as possible.',
+          'Email Client Opened',
+          'Your device\'s email client has been opened with your message. Please send the email to complete your request.',
           [{ text: 'OK' }]
         );
       } else {
-        throw new Error('Failed to send message');
+        throw new Error('Failed to open email client');
       }
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('Error handling message:', error);
       
-      // Offer fallback option to open email client
       Alert.alert(
         'Error', 
-        'Failed to send message. Would you like to open your email app instead?',
-        [
-          {
-            text: 'Cancel',
-            style: 'cancel'
-          },
-          {
-            text: 'Open Email App',
-            onPress: () => {
-              const emailBody = `
-Name: ${name}
-Email: ${email}
-
-${message}
-              `;
-              Linking.openURL(`mailto:chhabrapranav2001@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`);
-            }
-          }
-        ]
+        'Failed to open email client. Please try again later or contact us directly at chhabrapranav2001@gmail.com',
+        [{ text: 'OK' }]
       );
     } finally {
       setIsLoading(false);
@@ -216,6 +184,13 @@ ${message}
               />
             </View>
             
+            <View style={styles.noteContainer}>
+              <Ionicons name="information-circle-outline" size={20} color="#4338ca" />
+              <Text style={styles.noteText}>
+                When you submit this form, your device's email app will open with your message pre-filled.
+              </Text>
+            </View>
+            
             <TouchableOpacity
               style={[
                 styles.submitButton,
@@ -270,13 +245,13 @@ ${message}
               </Text>
             </View>
             
-            <View style={styles.faqItem}>
+            {/* <View style={styles.faqItem}>
               <Text style={styles.faqQuestion}>How do I cancel my subscription?</Text>
               <Text style={styles.faqAnswer}>
                 You can cancel your subscription at any time from the Account section 
                 in your Profile settings.
               </Text>
-            </View>
+            </View> */}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -345,6 +320,23 @@ const styles = StyleSheet.create({
   textAreaInput: {
     minHeight: 120,
     paddingTop: 12,
+  },
+  noteContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+    padding: 12,
+    backgroundColor: '#f5f3ff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd6fe',
+  },
+  noteText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#5b21b6',
+    marginLeft: 8,
+    lineHeight: 20,
   },
   submitButton: {
     backgroundColor: '#4338ca',

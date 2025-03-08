@@ -16,6 +16,7 @@ import ProfileScreen from './screens/ProfileScreen';
 import EditProfileScreen from './screens/EditProfileScreen';
 import HelpSupportScreen from './screens/HelpSupportScreen';
 import PrivacyPolicyScreen from './screens/PrivacyPolicyScreen';
+import TermsOfServiceScreen from './screens/TermsOfServiceScreen';
 import ChangePasswordScreen from './screens/ChangePasswordScreen';
 import FeaturesScreen from './screens/FeaturesScreen';
 
@@ -27,6 +28,7 @@ const WrappedProfileScreen = withScreenWrapper(ProfileScreen);
 const WrappedEditProfileScreen = withScreenWrapper(EditProfileScreen);
 const WrappedHelpSupportScreen = withScreenWrapper(HelpSupportScreen);
 const WrappedPrivacyPolicyScreen = withScreenWrapper(PrivacyPolicyScreen);
+const WrappedTermsOfServiceScreen = withScreenWrapper(TermsOfServiceScreen);
 const WrappedChangePasswordScreen = withScreenWrapper(ChangePasswordScreen);
 const WrappedFeaturesScreen = withScreenWrapper(FeaturesScreen);
 
@@ -35,6 +37,8 @@ type AuthStackParamList = {
   Home: undefined;
   AuthScreen: undefined;
   Features: undefined;
+  PrivacyPolicy: undefined;
+  TermsOfService: undefined;
 };
 
 type AppStackParamList = {
@@ -44,6 +48,7 @@ type AppStackParamList = {
   EditProfile: undefined;
   HelpSupport: undefined;
   PrivacyPolicy: undefined;
+  TermsOfService: undefined;
   ChangePassword: undefined;
   Features: undefined;
   Home: undefined;
@@ -65,6 +70,8 @@ const AuthStackNavigator = () => (
     <AuthStack.Screen name="Home" component={HomeScreen} />
     <AuthStack.Screen name="AuthScreen" component={WrappedAuthScreen} />
     <AuthStack.Screen name="Features" component={WrappedFeaturesScreen} />
+    <AuthStack.Screen name="PrivacyPolicy" component={WrappedPrivacyPolicyScreen} />
+    <AuthStack.Screen name="TermsOfService" component={WrappedTermsOfServiceScreen} />
   </AuthStack.Navigator>
 );
 
@@ -83,6 +90,7 @@ const AppStackNavigator = () => (
     <AppStack.Screen name="EditProfile" component={WrappedEditProfileScreen} />
     <AppStack.Screen name="HelpSupport" component={WrappedHelpSupportScreen} />
     <AppStack.Screen name="PrivacyPolicy" component={WrappedPrivacyPolicyScreen} />
+    <AppStack.Screen name="TermsOfService" component={WrappedTermsOfServiceScreen} />
     <AppStack.Screen name="ChangePassword" component={WrappedChangePasswordScreen} />
     <AppStack.Screen name="Features" component={WrappedFeaturesScreen} />
     <AppStack.Screen name="Home" component={HomeScreen} />
