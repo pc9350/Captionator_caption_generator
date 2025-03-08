@@ -14,6 +14,7 @@ import {
 import { auth, googleProvider } from '../firebase/config';
 import { useRouter } from 'next/navigation';
 import { setAuthCookie, removeAuthCookie } from '../utils/authCookies';
+import { getProfilePicture } from '../utils/profileUtils';
 
 interface AuthContextType {
   user: User | null;

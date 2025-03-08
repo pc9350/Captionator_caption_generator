@@ -1,5 +1,13 @@
 import { initializeApp, getApp, getApps, FirebaseApp } from 'firebase/app';
-import { getFirestore, connectFirestoreEmulator, Firestore, enableIndexedDbPersistence } from 'firebase/firestore';
+import { 
+  getFirestore, 
+  connectFirestoreEmulator, 
+  Firestore, 
+  initializeFirestore, 
+  persistentLocalCache, 
+  persistentMultipleTabManager,
+  FirestoreSettings
+} from 'firebase/firestore';
 import { getStorage, connectStorageEmulator, FirebaseStorage } from 'firebase/storage';
 import { getAuth, Auth, GoogleAuthProvider, connectAuthEmulator } from 'firebase/auth';
 
@@ -46,7 +54,21 @@ const initializeFirebase = () => {
       console.log('Using existing Firebase app');
     }
     
-    const db = getFirestore(app);
+    // Initialize Firestore with persistent cache
+    let db: Firestore;
+    if (typeof window !== 'undefined') {
+      // Use persistentLocalCache with multi-tab support in browser environment
+      db = initializeFirestore(app, {
+        cache: persistentLocalCache({
+          tabManager: persistentMultipleTabManager()
+        })
+      } as any); // Type assertion to bypass TypeScript error
+      console.log('Firestore initialized with persistent cache');
+    } else {
+      // Use default settings in non-browser environment
+      db = getFirestore(app);
+    }
+    
     const storage = getStorage(app);
     const auth = getAuth(app);
     const googleProvider = new GoogleAuthProvider();
@@ -55,19 +77,6 @@ const initializeFirebase = () => {
     googleProvider.setCustomParameters({
       prompt: 'select_account'
     });
-    
-    // Enable offline persistence if in browser environment
-    if (typeof window !== 'undefined') {
-      enableIndexedDbPersistence(db).catch((err) => {
-        if (err.code === 'failed-precondition') {
-          console.warn('Multiple tabs open, persistence can only be enabled in one tab at a time.');
-        } else if (err.code === 'unimplemented') {
-          console.warn('The current browser does not support all of the features required to enable persistence.');
-        } else {
-          console.error('Error enabling offline persistence:', err);
-        }
-      });
-    }
     
     // Use emulators in development if needed
     if (process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATORS === 'true') {
@@ -78,7 +87,7 @@ const initializeFirebase = () => {
       }
     }
     
-    console.log('Firebase services initialized successfully');
+    // console.log('Firebase services initialized successfully');
     return { app, db, storage, auth, googleProvider };
   } catch (error) {
     console.error('Error initializing Firebase:', error);

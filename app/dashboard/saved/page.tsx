@@ -135,7 +135,7 @@ export default function SavedCaptions() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-indigo-950 pt-28 pb-12">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pt-6 pb-20 md:pb-12">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto">
           <motion.div

@@ -7,6 +7,7 @@ import { FiMenu, FiX, FiHome, FiBookmark, FiLogIn, FiLogOut, FiUser } from 'reac
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/app/context/AuthContext';
 import Image from 'next/image';
+import ProfileImage from './ProfileImage';
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -200,19 +201,12 @@ export default function Navbar() {
                     onClick={toggleDropdown}
                     aria-expanded={isDropdownOpen}
                   >
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center overflow-hidden border-2 border-white border-opacity-50 hover:border-opacity-100 transition-all duration-300 shadow-md">
-                      {user.photoURL ? (
-                        <Image 
-                          src={user.photoURL} 
-                          alt={user.displayName || 'User'} 
-                          width={40} 
-                          height={40} 
-                          className="rounded-full"
-                        />
-                      ) : (
-                        <FiUser className="w-5 h-5 text-white" />
-                      )}
-                    </div>
+                    <ProfileImage
+                      photoURL={user.photoURL}
+                      displayName={user.displayName}
+                      size={40}
+                      className="border-2 border-white border-opacity-50 hover:border-opacity-100 transition-all duration-300 shadow-md"
+                    />
                   </motion.button>
                   <AnimatePresence>
                     {isDropdownOpen && (
@@ -223,6 +217,24 @@ export default function Navbar() {
                         exit={{ opacity: 0, scale: 0.95, y: -10 }}
                         transition={{ duration: 0.2 }}
                       >
+                        <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-700">
+                          <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                            {user.displayName || 'User'}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                            {user.email}
+                          </p>
+                        </div>
+                        
+                        <Link
+                          href="/dashboard/profile"
+                          className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center transition-colors duration-200"
+                          onClick={() => setIsDropdownOpen(false)}
+                        >
+                          <FiUser className="mr-2" />
+                          Profile
+                        </Link>
+                        
                         <button
                           onClick={handleSignOut}
                           className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center transition-colors duration-200"
@@ -309,13 +321,39 @@ export default function Navbar() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.2, delay: 0.2 }}
+                  className="flex flex-col space-y-4"
                 >
+                  <div className="flex items-center space-x-3 px-4 py-2">
+                    <ProfileImage
+                      photoURL={user.photoURL}
+                      displayName={user.displayName}
+                      size={40}
+                    />
+                    <div>
+                      <p className="font-medium text-gray-800 dark:text-white">
+                        {user.displayName || 'User'}
+                      </p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                        {user.email}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <Link
+                    href="/dashboard/profile"
+                    className="block w-full px-4 py-3 rounded-lg text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-white/20 dark:hover:bg-gray-800/50 flex items-center space-x-3 transition-all duration-300"
+                    onClick={closeMenu}
+                  >
+                    <FiUser className="w-5 h-5" />
+                    <span>Profile</span>
+                  </Link>
+                  
                   <button
                     onClick={() => {
                       handleSignOut();
                       closeMenu();
                     }}
-                    className="block w-full px-4 py-3 rounded-lg text-base font-medium bg-gradient-to-r from-red-500 to-pink-500 text-white flex items-center space-x-3 mt-4 transition-all duration-300 shadow-md"
+                    className="block w-full px-4 py-3 rounded-lg text-base font-medium bg-gradient-to-r from-red-500 to-pink-500 text-white flex items-center space-x-3 transition-all duration-300 shadow-md"
                   >
                     <FiLogOut className="w-5 h-5" />
                     <span>Sign Out</span>
