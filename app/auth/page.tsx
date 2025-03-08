@@ -129,18 +129,25 @@ export default function Auth() {
     }
   };
 
-  const slideVariants = {
-    left: { x: 0 },
-    right: { x: "100%" }
+  // Animation variants for the panels
+  const leftPanelVariants = {
+    signIn: { x: "0%" },
+    signUp: { x: "100%" }
+  };
+
+  const rightPanelVariants = {
+    signIn: { x: "0%" },
+    signUp: { x: "-100%" }
   };
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row overflow-hidden">
-      {/* Left side - Decorative (hidden on mobile, shown on desktop) */}
+      {/* Left panel - Changes position based on auth mode */}
       <motion.div 
         className="hidden md:flex w-full md:w-1/2 bg-gradient-to-br from-indigo-600 to-purple-700 text-white p-8 flex-col justify-center items-center relative overflow-hidden"
-        initial={{ x: isSignIn ? 0 : "100%" }}
-        animate={{ x: isSignIn ? 0 : "100%" }}
+        variants={leftPanelVariants}
+        initial={isSignIn ? "signIn" : "signUp"}
+        animate={isSignIn ? "signIn" : "signUp"}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
       >
         <div className="absolute inset-0 bg-black opacity-10 z-0"></div>
@@ -200,14 +207,6 @@ export default function Auth() {
           </div>
           
           <div className="z-10 text-center">
-            {/* <div className="w-16 h-16 mx-auto mb-4 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center">
-              <Image 
-                src="/images/captionator-logo.ico" 
-                alt="Captionator Logo" 
-                width={36} 
-                height={36} 
-              />
-            </div> */}
             <h2 className="text-3xl font-bold mb-2">
               {isSignIn ? "Welcome Back!" : "Join Us Today!"}
             </h2>
@@ -220,8 +219,14 @@ export default function Auth() {
         </div>
       </div>
       
-      {/* Form container - Full width on mobile, half width on desktop */}
-      <div className="w-full md:w-1/2 bg-white dark:bg-gray-900 p-6 md:p-8 flex items-center justify-center md:pt-8 pt-10">
+      {/* Right panel - Form container */}
+      <motion.div 
+        className="w-full md:w-1/2 bg-white dark:bg-gray-900 p-6 md:p-8 flex items-center justify-center md:pt-8 pt-10"
+        variants={rightPanelVariants}
+        initial={isSignIn ? "signIn" : "signUp"}
+        animate={isSignIn ? "signIn" : "signUp"}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      >
         <div className="w-full max-w-md">
           <AnimatePresence mode="wait">
             {isSignIn ? (
@@ -521,7 +526,7 @@ export default function Auth() {
             )}
           </AnimatePresence>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
